@@ -20,7 +20,7 @@
 Computer-use and browser-use agents stall the moment your Mac locks. Sparekey is a small macOS CLI that lets an agent unlock **your own, already logged-in** session with a password you saved locally, finish its task, and restore the lock.
 
 ```sh
-sparekey unlock   # let the agent get to work
+sparekey unlock   # let the agent get to work; cover the physical displays
 sparekey lock     # restore the lock when it is done
 ```
 
@@ -46,6 +46,7 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 - `setup` copies the binary to a fixed location, signs it with a local code-signing identity, and runs it as a per-user background helper.
 - The password lives in your login Keychain. Only that signed helper is allowed to read it.
 - The helper fills only a verified password field, submits **at most once**, and fails closed on anything unexpected: other accounts, dialogs, recovery screens, or layout changes.
+- Before password submission, a black cover is placed beneath the lock screen and hides the physical displays after unlock while remaining invisible to screenshots. Agent clicks and typing pass through it. Its Lock Mac button locks the screen with one click. Use `sparekey unlock --no-cover` to skip it.
 - A persistent 30-second limiter and a circuit breaker stop a stale password from piling up failed logins.
 
 ## Requirements
@@ -114,7 +115,7 @@ Asking for GUI work counts as permission to unlock for that task. Tell the agent
 
 | Command | What it does |
 | --- | --- |
-| `sparekey unlock` | Unlock once, confirm the state, and keep the display awake until `lock` or 60 minutes |
+| `sparekey unlock [--no-cover]` | Unlock once, confirm the state, cover the physical displays by default, and keep the display awake until `lock` or 60 minutes |
 | `sparekey lock` | Lock and confirm; already locked is a no-op |
 | `sparekey status` | Print `locked` or `unlocked` |
 | `sparekey probe` | Wake the display and check the password field without reading the password |
@@ -137,7 +138,7 @@ Running `sparekey` with no arguments shows help; it never unlocks.
 
 Exit codes: `0` success, `1` operational failure, `2` usage error. A successful `status` can report either state, so check `state`.
 
-Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
+Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
 
 </details>
 
@@ -155,7 +156,7 @@ Start with `sparekey doctor`. Every failing row shows how to fix it.
 Please read [SECURITY.md](SECURITY.md) before installing. In short:
 
 - **Any process running as your user can ask the helper to unlock.** Sparekey is for a trusted personal account. It does not protect you from malware that is already running as you.
-- Unlocking makes the physical screen visible to anyone nearby.
+- The default cover hides the physical displays during agent work. Screenshots omit the cover, and the agent can still operate apps underneath it.
 - The helper uses the hardened runtime and listens only on a private local socket, never on the network.
 - The signing key cannot be exported and no app is pre-trusted to use it. Clicking **Always Allow** would change that.
 

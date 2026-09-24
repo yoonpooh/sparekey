@@ -9,10 +9,14 @@ enum AwakeHold {
     private static let queue = DispatchQueue(label: "sparekey.awake-hold")
     private static var assertion: IOPMAssertionID = 0
     private static var watcher: DispatchSourceTimer?
+    private static var generation: UInt64 = 0
+    private static var onEnd: ((UInt64) -> Void)?
 
-    static func start() -> Bool {
+    static func start(onEnd: @escaping (UInt64) -> Void) -> (held: Bool, token: UInt64) {
         queue.sync {
             stop()
+            generation &+= 1
+            self.onEnd = onEnd
             let properties: [String: Any] = [
                 kIOPMAssertionTypeKey: kIOPMAssertPreventUserIdleDisplaySleep,
                 kIOPMAssertionNameKey: "sparekey unlocked for an agent task",
@@ -20,18 +24,18 @@ enum AwakeHold {
                 kIOPMAssertionTimeoutActionKey: kIOPMAssertionTimeoutActionRelease,
             ]
             var id: IOPMAssertionID = 0
-            guard IOPMAssertionCreateWithProperties(properties as CFDictionary, &id) == kIOReturnSuccess else { return false }
-            assertion = id
+            let held = IOPMAssertionCreateWithProperties(properties as CFDictionary, &id) == kIOReturnSuccess
+            if held { assertion = id }
             let deadline = ProcessInfo.processInfo.systemUptime + Double(seconds)
             let timer = DispatchSource.makeTimerSource(queue: queue)
             timer.schedule(deadline: .now() + 5, repeating: 5)
             timer.setEventHandler {
-                // Release as soon as the screen is locked by any means, or the state is unreadable.
-                if ProcessInfo.processInfo.systemUptime >= deadline || (try? Screen.locked()) != false { stop() }
+                // An unreadable state is not proof of a lock; keep the cover up.
+                if ProcessInfo.processInfo.systemUptime >= deadline || (try? Screen.locked()) == true { stop() }
             }
             timer.resume()
             watcher = timer
-            return true
+            return (held, generation)
         }
     }
 
@@ -42,5 +46,8 @@ enum AwakeHold {
         watcher = nil
         if assertion != 0 { IOPMAssertionRelease(assertion) }
         assertion = 0
+        let callback = onEnd
+        onEnd = nil
+        callback?(generation)
     }
 }

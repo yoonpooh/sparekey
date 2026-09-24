@@ -221,14 +221,15 @@ enum Screen {
         return next
     }
 
-    static func unlock() throws {
+    static func unlock(beforeFill: () throws -> Void = {}) throws {
         submitted = false
         let target = try prepare()
         let field = try LoginPolicy.field(in: target.nodes)
+        _ = try validate(target, field: field)
+        try beforeFill()
         var password = try Credentials.read()
         defer { password.resetBytes(in: password.startIndex..<password.endIndex) }
         guard !password.isEmpty else { throw SparekeyError("The saved credential is invalid.", code: "credential_unavailable") }
-        _ = try validate(target, field: field)
         defer {
             if (try? validate(target, field: field)) != nil {
                 _ = AXUIElementSetAttributeValue(target.elements[field], kAXValueAttribute as CFString, "" as CFString)
@@ -239,6 +240,7 @@ enum Screen {
             guard let text = String(data: password, encoding: .utf8), !text.isEmpty else {
                 throw SparekeyError("The saved credential is invalid.", code: "credential_unavailable")
             }
+            _ = try validate(target, field: field)
             fillStatus = AXUIElementSetAttributeValue(target.elements[field], kAXValueAttribute as CFString, text as CFString)
         }
         guard fillStatus == .success else { throw SparekeyError("Could not fill the verified password field.", code: "field_not_ready") }

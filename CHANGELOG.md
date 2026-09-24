@@ -5,6 +5,8 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+- Place a black cover on every physical display before password submission, with a one-click Lock Mac button and an embedded logo. The cover is excluded from screen capture and allows input to reach apps underneath. `unlock --no-cover` skips it.
+
 ## [0.1.2] - 2026-09-24
 
 - Keep the saved password across upgrades. Setup has the running helper hand it to the re-signed helper, which re-saves it under its own Keychain partition. Upgrading from 0.1.1 or earlier still asks once.
