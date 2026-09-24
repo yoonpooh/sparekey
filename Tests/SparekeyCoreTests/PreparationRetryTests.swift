@@ -84,4 +84,41 @@ final class PreparationRetryTests: XCTestCase {
         XCTAssertEqual(result, 7)
         XCTAssertEqual(attempts, 1)
     }
+    func testTwoPhasePreparationStopsAtEachDeadline() throws {
+        var now = 0.0, firstAttempts = 0, secondAttempts = 0
+        let first: Int? = try PreparationRetry.run(deadline: 1.5, attemptIfExpired: false,
+                                                  now: { now }, sleep: { now += $0 }, onTransient: {}) {
+            firstAttempts += 1
+            return nil
+        }
+        XCTAssertNil(first)
+        XCTAssertEqual(now, 1.5, accuracy: 0.0001)
+        XCTAssertEqual(firstAttempts, 15)
+        now += 2 // bounded display recovery before a fresh phase
+        let second: Int? = try PreparationRetry.run(deadline: now + 4.5, attemptIfExpired: false,
+                                                   now: { now }, sleep: { now += $0 }, onTransient: {}) {
+            secondAttempts += 1
+            return secondAttempts == 2 ? 42 : nil
+        }
+        XCTAssertEqual(second, 42)
+        XCTAssertEqual(secondAttempts, 2)
+        let expired: Int? = try PreparationRetry.run(deadline: now - 0.1, attemptIfExpired: false,
+                                                    now: { now }, sleep: { _ in XCTFail("Must not sleep") }, onTransient: {}) {
+            XCTFail("Must not take a snapshot after the deadline")
+            return 7
+        }
+        XCTAssertNil(expired)
+    }
+    func testLateSnapshotResultIsDiscardedWhenRequested() throws {
+        var now = 0.0, attempts = 0
+        let result: Int? = try PreparationRetry.run(deadline: 1, attemptIfExpired: false,
+                                                   acceptLateResult: false, now: { now }, sleep: { now += $0 },
+                                                   onTransient: {}) {
+            attempts += 1
+            now = 1.1
+            return 42
+        }
+        XCTAssertNil(result)
+        XCTAssertEqual(attempts, 1)
+    }
 }

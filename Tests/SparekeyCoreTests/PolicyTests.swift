@@ -11,6 +11,9 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(try Invocation.parse([]).command, .help)
         XCTAssertEqual(try Invocation.parse(["--version"]).command, .version)
         XCTAssertTrue(try Invocation.parse(["unlock", "--json"]).json)
+        XCTAssertTrue(try Invocation.parse(["unlock", "--no-cover"]).noCover)
+        XCTAssertThrowsError(try Invocation.parse(["lock", "--no-cover"]))
+        XCTAssertThrowsError(try Invocation.parse(["unlock", "--no-cover", "--no-cover"]))
         XCTAssertEqual(try Invocation.parse(["setup", "--skill", "codex"]).skillTargets, ["codex"])
         XCTAssertEqual(try Invocation.parse(["setup", "--skill", "claude,codex"]).skillTargets, ["claude", "codex"])
         XCTAssertEqual(try Invocation.parse(["setup", "--skill", "codex", "--skill", "claude"]).skillTargets, ["claude", "codex"])
@@ -51,6 +54,47 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(try JSONSerialization.jsonObject(with: data) as? [String: Any] != nil, true)
         XCTAssertEqual(try JSONDecoder().decode(Envelope.self, from: data).error?.code, "rate_limited")
         XCTAssertEqual(try JSONDecoder().decode(Request.self, from: JSONEncoder().encode(Request("status"))).v, 1)
+        XCTAssertEqual(Request("unlock").v, 2)
+        XCTAssertTrue(Request("unlock").isSupportedByCoverHelper)
+        XCTAssertTrue(Request("unlock", noCover: true).isSupportedByCoverHelper)
+        XCTAssertTrue(try JSONDecoder().decode(Request.self, from: JSONEncoder().encode(Request("unlock", noCover: true))).noCover)
+        let oldCLI = try JSONDecoder().decode(Request.self, from: Data(#"{"v":1,"command":"unlock"}"#.utf8))
+        XCTAssertFalse(oldCLI.noCover)
+        XCTAssertTrue(oldCLI.isSupportedByCoverHelper)
+        XCTAssertFalse(try JSONDecoder().decode(Request.self, from: Data(#"{"v":2,"command":"status"}"#.utf8)).isSupportedByCoverHelper)
+    }
+    func testNewPendingCoverIgnoresOldWatcherEnd() {
+        var ownership = CoverOwnership()
+        XCTAssertTrue(ownership.begin(attempt: 1))
+        XCTAssertEqual(ownership.bind(attempt: 1, token: 1), .bound)
+        // External relock, then a new unlock before the old watcher notices.
+        XCTAssertTrue(ownership.begin(attempt: 2))
+        XCTAssertFalse(ownership.end(token: 1))
+        XCTAssertEqual(ownership.bind(attempt: 2, token: 2), .bound)
+        XCTAssertTrue(ownership.end(token: 2))
+        XCTAssertTrue(ownership.begin(attempt: 3))
+        XCTAssertTrue(ownership.cancel(attempt: 3))
+        XCTAssertFalse(ownership.begin(attempt: 3))
+    }
+    func testDisplayRevealRecoveryDecision() {
+        XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 1.49, state: .waitingForAccount,
+                                                        sawOwnLabel: false, attempted: false))
+        XCTAssertTrue(DisplayRevealPolicy.shouldRecover(elapsed: 1.5, state: .waitingForAccount,
+                                                       sawOwnLabel: false, attempted: false))
+        XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForAccount,
+                                                        sawOwnLabel: true, attempted: false))
+        XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForField,
+                                                        sawOwnLabel: false, attempted: false))
+        XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForAccount,
+                                                        sawOwnLabel: false, attempted: true))
+    }
+    func testCoverUnavailableConsumesLimiterWithoutTrippingBreaker() {
+        var state = SafetyState()
+        XCTAssertThrowsError(try UnlockAttempt.run(state: &state, now: 100, persist: { _ in },
+                                                  submit: { throw SparekeyError("cover unavailable", code: "cover_unavailable") },
+                                                  wasSubmitted: { false }))
+        XCTAssertEqual(state.lastAttempt, 100)
+        XCTAssertFalse(state.breakerTripped)
     }
     func testLoginPolicyRequiresOwnAccountAndSingleSubmission() throws {
         let nodes = [LoginNode(role: "AXWindow", identifier: "login"),

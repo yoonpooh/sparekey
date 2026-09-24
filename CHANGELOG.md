@@ -5,6 +5,8 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+- Recover once from an awake login screen that has no account label or password field by cycling display sleep and remote wake before giving up.
+
 - Place a black cover on every physical display before password submission, with a one-click Lock Mac button and an embedded logo. The cover is excluded from screen capture and allows input to reach apps underneath. `unlock --no-cover` skips it.
 
 ## [0.1.2] - 2026-09-24

@@ -15,13 +15,16 @@ public struct SparekeyError: Error, CustomStringConvertible {
 
 public enum PreparationRetry {
     public static func run<T>(deadline: TimeInterval,
+                              attemptIfExpired: Bool = true,
+                              acceptLateResult: Bool = true,
                               now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
                               sleep: (TimeInterval) -> Void = { Thread.sleep(forTimeInterval: $0) },
                               onTransient: () -> Void, attempt: () throws -> T?) throws -> T? {
+        if !attemptIfExpired && now() >= deadline { return nil }
         var lastError: SparekeyError?
         repeat {
             do {
-                if let result = try attempt() { return result }
+                if let result = try attempt(), acceptLateResult || now() < deadline { return result }
                 lastError = nil
             } catch let error as SparekeyError where error.transient {
                 lastError = error
