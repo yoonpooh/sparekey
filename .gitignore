@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+dist/
+*.xcuserstate
+*.xcuserdatad/
+.env
+.env.*
+*.p12
+*.pfx
+*.key
+*.pem
+*.keychain-db
+scripts/spike/work/
