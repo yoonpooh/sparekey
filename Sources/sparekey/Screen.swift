@@ -67,7 +67,7 @@ enum Screen {
         var result: CFTypeRef?
         let status = AXUIElementCopyAttributeValue(element, name as CFString, &result)
         if status == .noValue || status == .attributeUnsupported { return nil }
-        guard status == .success else { throw SparekeyError("Cannot inspect the login screen (AXError \(status.rawValue)).") }
+        guard status == .success else { throw SparekeyError("Cannot inspect the login screen (AXError \(status.rawValue)).", transient: true) }
         return result
     }
 
@@ -97,15 +97,23 @@ enum Screen {
         let root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.2)
         guard let windows = try value(root, kAXWindowsAttribute) as? [AXUIElement], windows.count == 1 else {
-            throw SparekeyError("Unsupported login window layout.", code: "login_window_unsupported")
+            throw SparekeyError("Unsupported login window layout.", code: "login_window_unsupported", transient: true)
         }
         var elements: [AXUIElement] = [], nodes: [LoginNode] = []
         var ownLabel = false, labelCount = 0
         let deadline = ProcessInfo.processInfo.systemUptime + 3
         func visit(_ element: AXUIElement, parent: Int?, depth: Int) throws {
-            guard depth < 12, nodes.count < 256, ProcessInfo.processInfo.systemUptime < deadline,
-                  !elements.contains(where: { CFEqual($0, element) }) else {
-                throw SparekeyError("Login screen inspection exceeded its bounds.", code: "login_window_unsupported")
+            guard depth < 12 else {
+                throw SparekeyError("Login screen inspection exceeded its depth limit.", code: "login_window_unsupported", transient: true)
+            }
+            guard nodes.count < 256 else {
+                throw SparekeyError("Login screen inspection exceeded its node count limit.", code: "login_window_unsupported", transient: true)
+            }
+            guard ProcessInfo.processInfo.systemUptime < deadline else {
+                throw SparekeyError("Login screen inspection exceeded its time budget.", code: "login_window_unsupported", transient: true)
+            }
+            guard !elements.contains(where: { CFEqual($0, element) }) else {
+                throw SparekeyError("Login screen inspection encountered a duplicate element.", code: "login_window_unsupported", transient: true)
             }
             AXUIElementSetMessagingTimeout(element, 0.2)
             let role = try value(element, kAXRoleAttribute) as? String ?? ""
@@ -126,13 +134,13 @@ enum Screen {
             var writable: DarwinBoolean = false
             if identifier == "UserPasswordTextField" {
                 guard AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &writable) == .success else {
-                    throw SparekeyError("The secure password field is not writable.", code: "field_not_ready")
+                    throw SparekeyError("The secure password field is not writable.", code: "field_not_ready", transient: true)
                 }
             }
             var actions: CFArray?
             let actionStatus = AXUIElementCopyActionNames(element, &actions)
             guard [.success, .noValue, .attributeUnsupported].contains(actionStatus) else {
-                throw SparekeyError("Cannot inspect login actions.")
+                throw SparekeyError("Cannot inspect login actions.", transient: true)
             }
             let index = nodes.count
             nodes.append(LoginNode(role: role, subrole: subrole, identifier: identifier, parent: parent,
@@ -162,9 +170,11 @@ enum Screen {
         defer { IOPMAssertionRelease(activity) }
         let deadline = ProcessInfo.processInfo.systemUptime + 5
         var previous: Snapshot?
+        var consecutive = false
         var revealed = false
         var lastState = LoginPolicy.Preparation.waitingForAccount
-        repeat {
+        // Keep window identity across failures, but require fresh consecutive observations for Return.
+        if let ready = try PreparationRetry.run(deadline: deadline, onTransient: { consecutive = false }, attempt: {
             let current = try snapshot()
             let state = try LoginPolicy.preparation(in: current.nodes, ownLabel: current.ownLabel)
             if let previous, !sameWindow(previous, current) {
@@ -173,7 +183,7 @@ enum Screen {
             if state == .ready { return current }
             // Require two matching, verified collapsed snapshots before sending Return.
             // Never send Return to a disabled field or an unrecognized account screen.
-            if state == .collapsed, !revealed, let previous,
+            if state == .collapsed, !revealed, consecutive, let previous,
                previous.ownLabel, previous.nodes.count == current.nodes.count,
                zip(previous.nodes, current.nodes).allSatisfy({
                    $0.identifier == $1.identifier && $0.role == $1.role && $0.subrole == $1.subrole
@@ -187,9 +197,10 @@ enum Screen {
                 revealed = true
             }
             previous = current
+            consecutive = true
             lastState = state
-            Thread.sleep(forTimeInterval: 0.1)
-        } while ProcessInfo.processInfo.systemUptime < deadline
+            return nil
+        }) { return ready }
         switch lastState {
         case .waitingForAccount:
             throw SparekeyError("The current-account label did not become available within 5 seconds. No password was submitted.", code: "field_not_ready")
