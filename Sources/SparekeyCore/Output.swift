@@ -109,7 +109,7 @@ public struct DoctorFacts {
 }
 
 public enum DoctorReport {
-    public static let expectedVersion = "0.1.1"
+    public static let expectedVersion = "0.1.2"
     static let setupHint = "Run 'sparekey setup' in a local terminal."
 
     public static func evaluate(_ facts: DoctorFacts) -> [DoctorCheck] {

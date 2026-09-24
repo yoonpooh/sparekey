@@ -1,7 +1,7 @@
 import Foundation
 
 public enum Command: String, Codable, CaseIterable {
-    case unlock, lock, status, probe, setup, doctor, skill, uninstall, help, version, serve, continueSetup = "setup-continue", ttyProbe = "tty-probe", ttyProbeChild = "tty-probe-child", testImport = "test-import"
+    case unlock, lock, status, probe, setup, doctor, skill, uninstall, help, version, serve, continueSetup = "setup-continue", ttyProbe = "tty-probe", ttyProbeChild = "tty-probe-child", testImport = "test-import", credentialHandoff = "credential-handoff"
 }
 
 public struct SparekeyError: Error, CustomStringConvertible {
@@ -57,7 +57,7 @@ public struct Invocation {
             guard words.count <= 1 else { throw usage() }
             let target = words.first.flatMap { Command(rawValue: $0.lowercased()) } ?? .help
             if words.count == 1 && target == .help && words[0].lowercased() != "help" { throw usage() }
-            guard ![.serve, .continueSetup, .ttyProbe, .ttyProbeChild, .testImport].contains(target) else { throw usage() }
+            guard ![.serve, .continueSetup, .ttyProbe, .ttyProbeChild, .testImport, .credentialHandoff].contains(target) else { throw usage() }
             return Invocation(command: .help, json: false, helpFor: target, identity: nil, resetPassword: false, noSkill: false, skillTargets: nil, agent: nil, force: false)
         }
         var json = false, reset = false, noSkill = false, force = false
@@ -116,10 +116,10 @@ public struct Reply: Codable {
     public let accessibility: Bool?
     public let credentialReadable: Bool?
     public init(state: String? = nil, message: String, accessibility: Bool? = nil, credentialReadable: Bool? = nil) {
-        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.1.1"; self.accessibility = accessibility; self.credentialReadable = credentialReadable
+        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.1.2"; self.accessibility = accessibility; self.credentialReadable = credentialReadable
     }
     public init(code: String, message: String) {
-        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.1.1"; accessibility = nil; credentialReadable = nil
+        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.1.2"; accessibility = nil; credentialReadable = nil
     }
 }
 

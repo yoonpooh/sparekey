@@ -221,7 +221,7 @@ enum Setup {
     }
     static func run(_ invocation: Invocation) throws {
         try localTTY()
-        Console.line(Console.palette.bold("Sparekey 0.1.1 setup"))
+        Console.line(Console.palette.bold("Sparekey 0.1.2 setup"))
         Console.line()
         try steps(invocation)
     }
@@ -243,10 +243,13 @@ enum Setup {
             try sign(identityHash)
         }
         Console.row(.ok, "Helper copy", "signed and verified")
+        // Before the restart stops it, let the running helper hand the saved password to the new copy.
+        if !invocation.resetPassword { handoff() }
         var checked = try step("Background helper", "starting") { () throws -> Reply in
             let directory = NSHomeDirectory() + "/Library/LaunchAgents"
             try FileManager.default.createDirectory(atPath: directory, withIntermediateDirectories: true)
             let plist: [String: Any] = ["Label": Paths.label, "ProgramArguments": [Paths.stable, "serve"],
+                                        "MachServices": [Handoff.service: true],
                                         "RunAtLoad": true, "KeepAlive": true, "ThrottleInterval": 10,
                                         "LimitLoadToSessionType": "Aqua", "ProcessType": "Interactive"]
             let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
@@ -289,6 +292,24 @@ enum Setup {
         let enabled = try accessibility(checked)
         if !enabled { warnings += 1 }
         for line in SetupReport.summary(warnings: warnings, stablePath: enabled ? Paths.stable : nil, palette: Console.palette) { Console.line(line) }
+    }
+    /// Best effort and bounded: on any failure the restarted helper reports the credential unreadable
+    /// and setup asks for the password instead.
+    static func handoff() {
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: Paths.stable)
+        task.arguments = ["credential-handoff"]
+        task.standardInput = FileHandle.nullDevice
+        task.standardOutput = FileHandle.nullDevice
+        task.standardError = FileHandle.nullDevice
+        let done = DispatchSemaphore(value: 0)
+        task.terminationHandler = { _ in done.signal() }
+        guard (try? task.run()) != nil else { return }
+        if done.wait(timeout: .now() + 30) == .timedOut {
+            // Never let a stalled child overlap the interactive fallback that also replaces the item.
+            task.terminate()
+            if done.wait(timeout: .now() + 2) == .timedOut { kill(task.processIdentifier, SIGKILL); task.waitUntilExit() }
+        }
     }
     /// Returns the number of warnings.
     static func installSkills(_ invocation: Invocation) -> Int {

@@ -3,7 +3,7 @@ import Darwin
 import SparekeyCore
 
 let help = """
-sparekey 0.1.1 — unlock and relock this user's logged-in Mac
+sparekey 0.1.2 — unlock and relock this user's logged-in Mac
 
 Usage:
   sparekey                  Show help
@@ -41,7 +41,7 @@ if command == .help {
     else { print(help) }
     exit(0)
 }
-if command == .version { print("sparekey 0.1.1"); exit(0) }
+if command == .version { print("sparekey 0.1.2"); exit(0) }
 do {
     guard getuid() != 0, getuid() == geteuid() else { throw SparekeyError("Run as your regular user, without sudo.") }
     switch command {
@@ -80,6 +80,7 @@ do {
         try Setup.localTTY()
         guard Bundle.main.executableURL?.resolvingSymlinksInPath().path == Paths.stable else { throw SparekeyError("Setup continuation requires stable copy.") }
         exit(Setup.stableContinuation())
+    case .credentialHandoff: try Handoff.receive()
     case .setup: try Setup.run(invocation)
     case .uninstall: try Uninstall.run()
     case .skill:
