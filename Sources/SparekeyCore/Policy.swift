@@ -7,7 +7,32 @@ public enum Command: String, Codable, CaseIterable {
 public struct SparekeyError: Error, CustomStringConvertible {
     public let code: String
     public let description: String
-    public init(_ description: String, code: String = "internal") { self.description = description; self.code = code }
+    public let transient: Bool
+    public init(_ description: String, code: String = "internal", transient: Bool = false) {
+        self.description = description; self.code = code; self.transient = transient
+    }
+}
+
+public enum PreparationRetry {
+    public static func run<T>(deadline: TimeInterval,
+                              now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+                              sleep: (TimeInterval) -> Void = { Thread.sleep(forTimeInterval: $0) },
+                              onTransient: () -> Void, attempt: () throws -> T?) throws -> T? {
+        var lastError: SparekeyError?
+        repeat {
+            do {
+                if let result = try attempt() { return result }
+                lastError = nil
+            } catch let error as SparekeyError where error.transient {
+                lastError = error
+                onTransient()
+            }
+            let remaining = deadline - now()
+            if remaining > 0 { sleep(min(0.1, remaining)) }
+        } while now() < deadline
+        if let lastError { throw lastError }
+        return nil
+    }
 }
 
 public struct Invocation {
