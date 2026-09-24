@@ -28,6 +28,8 @@ When `state` is `locked`:
 3. `sparekey status --json` and require `state: "unlocked"`.
 4. Set `unlocked_for_task = true`, then continue the original task.
 
+After a successful unlock the helper keeps the display awake until `sparekey lock` or 60 minutes, whichever comes first, so idle display sleep does not relock the Mac mid-task. If the Mac relocks later in the task anyway, repeat steps 1-3 once, at least 30 seconds after the last unlock.
+
 Never retry a failed unlock, type a password through UI automation, ask for the password in chat, or restart the helper to get around its limits.
 
 ## 3. Relock when done

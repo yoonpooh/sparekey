@@ -117,7 +117,7 @@ Newline-delimited JSON over the Unix socket, one request per connection:
 
 ```json
 {"v":1,"command":"status"}
-{"v":1,"ok":true,"state":"locked","message":"locked","helperVersion":"0.1.0"}
+{"v":1,"ok":true,"state":"locked","message":"locked","helperVersion":"0.1.1"}
 ```
 
 Both sides check the peer UID. The client reports `helper_version_mismatch`
@@ -143,6 +143,15 @@ and asks for `sparekey setup` when versions differ.
   saving. Whether this counts toward failed-login limits is unverified; it runs
   once, interactively.
 - **No-arg is help.** Unlock must be requested explicitly.
+- **Awake hold.** Unlocking does not reset the HID idle time, so idle display
+  sleep would relock the Mac minutes into the task. After a confirmed unlock
+  the helper holds a `PreventUserIdleDisplaySleep` assertion. It is released
+  on `lock`, within 5 seconds of any other relock, after 60 minutes, or when
+  the helper exits. Sparekey does not lock on expiry: afterwards the Mac's own
+  display sleep and password settings apply again, so an agent that never
+  relocks leaves the Mac unlocked for up to an hour plus whatever those
+  settings allow. If creating the assertion fails, unlock still succeeds and
+  the message says the display could not be kept awake.
 
 ## Lock method
 

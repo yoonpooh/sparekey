@@ -60,7 +60,7 @@ enum Transport {
         try verifyPeer(fd)
         try send(Request(command), to: fd)
         let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))
-        guard reply.v == 1, reply.helperVersion == "0.1.0" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        guard reply.v == 1, reply.helperVersion == "0.1.1" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
         return reply
     }
     static func serve() throws {
@@ -104,6 +104,7 @@ enum Transport {
         }
     }
     static func handle(_ command: String) throws -> Reply {
+        if command == "lock" { AwakeHold.release() }
         let locked = try Screen.locked()
         switch command {
         case "check":
@@ -123,7 +124,10 @@ enum Transport {
             var state = try StateFile.read()
             try UnlockAttempt.run(state: &state, now: Date().timeIntervalSince1970,
                                   persist: StateFile.write, submit: Screen.unlock, wasSubmitted: { Screen.submitted })
-            return Reply(state: "unlocked", message: "Computer unlocked.")
+            let held = AwakeHold.start()
+            return Reply(state: "unlocked", message: held
+                ? "Computer unlocked. Display kept awake until lock, for up to \(AwakeHold.seconds / 60) minutes."
+                : "Computer unlocked, but the display could not be kept awake. Idle display sleep may relock it.")
         default: throw SparekeyError("Unsupported helper request.", code: "usage")
         }
     }
