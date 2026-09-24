@@ -39,7 +39,7 @@ identity lives in one per-user location owned by `setup`:
 ~/Library/Application Support/sparekey/
   bin/sparekey          helper copy, signed with the local identity
   run/control.sock      0600, directory 0700
-  state.json            attempt limiter and circuit breaker
+  state.json            attempt limiter, circuit breaker, signer certificate SHA-1
 ~/Library/LaunchAgents/io.github.yoonpooh.sparekey.helper.plist
 ```
 
@@ -56,12 +56,23 @@ identity lives in one per-user location owned by `setup`:
 the same certificate keep the same designated requirement, so TCC and the
 Keychain ACL should keep trusting the helper across upgrades.
 
-This assumption is unverified. See the spike below; it gates the rest of the
-build. Where the identity is stored (login keychain vs a dedicated keychain)
-and how many authentication prompts it costs are also spike outputs.
+This assumption is unverified; the spike below tests it. v0.1 ships without
+waiting for it, so setup must detect and recover from a lost grant or ACL.
 
-Fallback if the spike fails: require a free Apple ID personal-team
-"Apple Development" certificate, as the MVP did.
+- The identity lives in the login keychain. Its private key ACL does not
+  pre-trust `/usr/bin/codesign`, so each signing asks the user to allow key
+  use. Setup imports the PKCS#12 with `SecItemImport` using an empty trusted-app
+  list and a sensitive, non-extractable private key. Users choose **Allow**,
+  never **Always Allow**, at the signing prompt. A process that can sign
+  silently with this key could build a binary the credential ACL trusts and
+  read the password.
+- `sparekey setup --identity <name>` signs with an existing identity instead,
+  for example a free Apple ID personal-team "Apple Development" certificate.
+- If the refreshed helper cannot read the saved credential, for example
+  because the item is partitioned by `cdhash`, setup asks for the password
+  again instead of failing.
+- If Accessibility is missing after a refresh, setup and `doctor` print the
+  exact path to re-enable.
 
 ## Command surface
 
@@ -118,7 +129,8 @@ and asks for `sparekey setup` when versions differ.
 ## Safety changes
 
 - **Persistent limiter.** The 30-second attempt interval lives in
-  `state.json`, so restarting the helper cannot bypass it.
+  `state.json`, so restarting the helper cannot bypass it. If the wall clock
+  moves backward, reset the timestamp instead of locking out indefinitely.
 - **Circuit breaker.** An unconfirmed unlock trips the breaker. Later unlocks
   fail with `breaker_tripped` until the user runs `sparekey setup` locally.
   This stops a stale saved password from piling up failed logins.
@@ -129,32 +141,59 @@ and asks for `sparekey setup` when versions differ.
 
 ## Lock method
 
-Keep Control-Command-Q plus lock-state verification. Whether it fails on
-non-US layouts or remapped shortcuts is unverified. Evaluate
-`SACLockScreenImmediate` (private, `dlopen`) as a fallback during v0.1 testing.
+Keep Control-Command-Q plus lock-state verification. The helper is signed
+with hardened runtime and no exception entitlements. The private fallback
+loads an Apple-signed system framework; AX and Keychain use Apple frameworks.
+An isolated hardened-runtime probe loaded the framework and resolved the
+fallback symbol. AX and Keychain still need a real signed-helper run. Whether the shortcut
+fails on non-US layouts or remapped shortcuts is unverified. If it does not
+lock within the timeout, the helper resolves `SACLockScreenImmediate` from
+`login.framework` with `dlopen` as a fallback, then verifies the lock state.
 
 ## Setup and upgrade flow
 
 1. `sparekey setup` must run in a local interactive terminal, unlocked, not
    over SSH, not as root.
 2. Create the local identity if missing.
-3. Copy the running binary to the stable path, sign it, verify the signature.
-4. If no credential exists or `--reset-password` is given, read the password
-   twice with echo off, verify it, and save it. Otherwise keep the existing one.
-5. Write the LaunchAgent plist, `bootout` then `bootstrap`.
-6. Reset the circuit breaker.
-7. Print the Accessibility step for the stable path if not yet granted.
+3. Copy the running binary to the stable path, sign with hardened runtime,
+   and verify identifier, selected certificate fingerprint, and runtime flag.
+4. Write the LaunchAgent plist, `bootout` then bounded-retry `bootstrap`.
+5. Ask the refreshed helper to `check`. An `ok:false` error aborts setup. If the
+   helper reports an unreadable credential or `--reset-password` was given,
+   the stable signed copy prompts once with echo off, verifies the password,
+   deletes and re-adds the item with a fresh ACL, restarts the helper, and
+   checks readability again. Otherwise keep the existing item.
+6. Pin the signing certificate in state.json and reset the circuit breaker.
+7. Prompt for skill targets (default: none) unless `--skill` or `--no-skill`
+   selects them explicitly. A skill failure warns without hiding the
+   Accessibility step.
+8. Print the Accessibility step for the stable path if not yet granted.
 
 After `brew upgrade`, rerunning `setup` refreshes the copy without asking for
 the password again.
 
 ## Agent skill
 
-The skill text ships inside the binary. `sparekey skill install` writes it to
-`~/.claude/skills/sparekey/SKILL.md` or the Codex user skills directory
-(currently documented as `~/.agents/skills`; verify before release). It
-refuses to overwrite without `--force`. The skill keeps the MVP's ownership
-rule: relock only if this task unlocked an initially locked Mac.
+The skill text ships inside the binary. Targets:
+
+- Claude Code: `~/.claude/skills/sparekey/SKILL.md`, when `~/.claude` exists.
+- Codex: `~/.agents/skills/sparekey/SKILL.md`, when `~/.agents` or `~/.codex`
+  exists.
+
+`setup` lists Claude Code and Codex, marks detected agents, and asks which
+skill targets to install. Enter selects none. `setup --skill codex`,
+`--skill claude`, or `--skill claude,codex` skips the prompt; `--skill` is
+repeatable. `--no-skill` also skips the prompt and conflicts with `--skill`.
+Undetected agents may be selected explicitly and their skill directory is
+created. `sparekey skill install` prompts the same way on a TTY; without a
+TTY it requires `--agent claude|codex`. An identical existing
+file is left alone. A different one is replaced only after an interactive
+yes, with the old file kept as `SKILL.md.bak`. `sparekey skill install
+[--agent claude|codex] [--force]` does the same outside setup, and
+`uninstall` removes only skill files whose content Sparekey wrote.
+
+The skill keeps the MVP's ownership rule: relock only if this task unlocked
+an initially locked Mac.
 
 ## Signing spike
 

@@ -1,0 +1,130 @@
+import Foundation
+import Darwin
+import ApplicationServices
+import SparekeyCore
+
+enum Transport {
+    static func address<T>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> T) throws -> T {
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        let bytes = Array(Paths.socket.utf8) + [0]
+        guard bytes.count <= MemoryLayout.size(ofValue: address.sun_path) else { throw SparekeyError("Socket path is too long.") }
+        withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: bytes) }
+        address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+        return try withUnsafePointer(to: &address) { pointer in
+            try pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) { try body($0, socklen_t(MemoryLayout<sockaddr_un>.size)) }
+        }
+    }
+    static func configure(_ fd: Int32, seconds: Int) {
+        var timeout = timeval(tv_sec: seconds, tv_usec: 0)
+        setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+        setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
+        var enabled: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &enabled, socklen_t(MemoryLayout<Int32>.size))
+    }
+    static func verifyPeer(_ fd: Int32) throws {
+        var uid: uid_t = 0, gid: gid_t = 0
+        guard getpeereid(fd, &uid, &gid) == 0, uid == getuid() else { throw SparekeyError("Socket peer is not this user.") }
+    }
+    static func send<T: Encodable>(_ value: T, to fd: Int32) throws {
+        try (JSONEncoder().encode(value) + Data([10])).withUnsafeBytes { bytes in
+            var offset = 0
+            while offset < bytes.count {
+                let count = Darwin.write(fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
+                if count < 0 && errno == EINTR { continue }
+                guard count > 0 else { throw SparekeyError("Cannot write helper message.") }
+                offset += count
+            }
+        }
+    }
+    static func receive(_ fd: Int32, limit: Int = 4096) throws -> Data {
+        var frame = LineFrame(limit: limit)
+        let deadline = ProcessInfo.processInfo.systemUptime + 20
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            var byte: UInt8 = 0
+            let count = Darwin.read(fd, &byte, 1)
+            if count < 0 && errno == EINTR { continue }
+            guard count == 1 else { throw SparekeyError("Helper disconnected or timed out.", code: "helper_not_running") }
+            if let result = try frame.append(byte) { return result }
+        }
+        throw SparekeyError("Helper message too large.")
+    }
+    static func request(_ command: String) throws -> Reply {
+        try Paths.checkedDirectory(Paths.base, create: false)
+        try Paths.checkedDirectory(Paths.run, create: false)
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw SparekeyError("Cannot create socket.") }
+        defer { close(fd) }
+        configure(fd, seconds: 20)
+        guard try address({ connect(fd, $0, $1) }) == 0 else { throw SparekeyError("Helper is not running. Run 'sparekey setup'.", code: "helper_not_running") }
+        try verifyPeer(fd)
+        try send(Request(command), to: fd)
+        let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))
+        guard reply.v == 1, reply.helperVersion == "0.1.0" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        return reply
+    }
+    static func serve() throws {
+        try Paths.checkedDirectory(Paths.base, create: true)
+        try Paths.checkedDirectory(Paths.run, create: true)
+        umask(0o077)
+        let lock = open(Paths.run + "/service.lock", O_CREAT | O_RDWR | O_NOFOLLOW, 0o600)
+        guard lock >= 0 else { throw SparekeyError("Cannot open helper lock.") }
+        defer { close(lock) }
+        guard flock(lock, LOCK_EX | LOCK_NB) == 0 else { throw SparekeyError("Helper already running.") }
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { throw SparekeyError("Cannot create helper socket.") }
+        defer { close(fd) }
+        var existing = stat()
+        if lstat(Paths.socket, &existing) == 0 {
+            guard existing.st_uid == getuid(), existing.st_mode & S_IFMT == S_IFSOCK, unlink(Paths.socket) == 0 else { throw SparekeyError("Unexpected socket path.") }
+        }
+        guard try address({ bind(fd, $0, $1) }) == 0 else { throw SparekeyError("Cannot bind helper socket.") }
+        defer { unlink(Paths.socket) }
+        guard chmod(Paths.socket, 0o600) == 0, listen(fd, 8) == 0 else { throw SparekeyError("Cannot listen on helper socket.") }
+        while true {
+            let peer = accept(fd, nil, nil)
+            if peer < 0 && errno == EINTR { continue }
+            guard peer >= 0 else { throw SparekeyError("Cannot accept helper connection.") }
+            autoreleasepool {
+                defer { close(peer) }
+                configure(peer, seconds: 20)
+                do {
+                    try verifyPeer(peer)
+                    let request = try JSONDecoder().decode(Request.self, from: receive(peer, limit: 256))
+                    guard request.v == 1, ["status", "probe", "unlock", "lock", "check"].contains(request.command) else {
+                        throw SparekeyError("Unsupported helper request.", code: "usage")
+                    }
+                    let reply = try handle(request.command)
+                    try send(reply, to: peer)
+                } catch {
+                    let issue = error as? SparekeyError ?? SparekeyError("Helper operation failed.")
+                    try? send(Reply(code: issue.code, message: issue.description), to: peer)
+                }
+            }
+        }
+    }
+    static func handle(_ command: String) throws -> Reply {
+        let locked = try Screen.locked()
+        switch command {
+        case "check":
+            var readable = false
+            if var password = try? Credentials.read() { readable = true; password.resetBytes(in: password.startIndex..<password.endIndex) }
+            return Reply(state: locked ? "locked" : "unlocked", message: "Helper check completed.", accessibility: AXIsProcessTrusted(), credentialReadable: readable)
+        case "status": return Reply(state: locked ? "locked" : "unlocked", message: locked ? "locked" : "unlocked")
+        case "lock":
+            if !locked { try Screen.lock() }
+            return Reply(state: "locked", message: locked ? "Already locked." : "Computer locked.")
+        case "probe":
+            if !locked { return Reply(state: "unlocked", message: "Already unlocked.") }
+            _ = try Screen.prepare()
+            return Reply(state: "locked", message: "Password field verified. No password was read or submitted.")
+        case "unlock":
+            if !locked { return Reply(state: "unlocked", message: "Already unlocked.") }
+            var state = try StateFile.read()
+            try UnlockAttempt.run(state: &state, now: Date().timeIntervalSince1970,
+                                  persist: StateFile.write, submit: Screen.unlock, wasSubmitted: { Screen.submitted })
+            return Reply(state: "unlocked", message: "Computer unlocked.")
+        default: throw SparekeyError("Unsupported helper request.", code: "usage")
+        }
+    }
+}
