@@ -58,13 +58,20 @@ No Apple Developer account is needed.
 
 ## Install
 
-Build from source. A Homebrew tap is planned.
+With Homebrew (builds from source on your Mac):
+
+```sh
+brew install yoonpooh/tap/sparekey
+sparekey setup --skill codex   # or: --skill claude, --skill claude,codex, --no-skill
+```
+
+Or build it yourself:
 
 ```sh
 git clone https://github.com/yoonpooh/sparekey.git
 cd sparekey
 swift build -c release
-.build/release/sparekey setup --skill codex   # or: --skill claude, --skill claude,codex, --no-skill
+.build/release/sparekey setup --skill codex
 ```
 
 Run setup in a local terminal while the Mac is unlocked, not over SSH. It will:
@@ -77,14 +84,14 @@ Run setup in a local terminal while the Mac is unlocked, not over SSH. It will:
 4. Start the background helper and install the agent skill you chose.
 5. Help you turn on **Accessibility** for the helper. It opens the settings pane, shows the file in Finder, and copies its path, then checks again after you enable it.
 
-Then put `sparekey` on your `PATH`:
+If you built from source, put `sparekey` on your `PATH`:
 
 ```sh
 ln -s "$HOME/Library/Application Support/sparekey/bin/sparekey" ~/.local/bin/sparekey
 sparekey doctor
 ```
 
-After pulling a new version, rebuild and run `setup` again. It refreshes the signed helper without asking for the password, unless the helper can no longer read it.
+After `brew upgrade sparekey` or rebuilding, run `sparekey setup` again. It refreshes the signed helper without asking for the password, unless the helper can no longer read it.
 
 ## Agent skills
 
