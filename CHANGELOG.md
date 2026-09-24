@@ -3,7 +3,7 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.0] - 2026-09-25
 
 - Recover once from an awake login screen that has no account label or password field by cycling display sleep and remote wake before giving up.
 

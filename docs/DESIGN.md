@@ -1,6 +1,6 @@
 # Sparekey design
 
-Status: draft for v0.1. Supersedes the `unlock` MVP (github.com/yoonpooh/unlock).
+Status: design notes through v0.2. Supersedes the `unlock` MVP (github.com/yoonpooh/unlock).
 
 ## Purpose
 
@@ -131,11 +131,16 @@ Newline-delimited JSON over the Unix socket, one request per connection:
 
 ```json
 {"v":1,"command":"status"}
-{"v":1,"ok":true,"state":"locked","message":"locked","helperVersion":"0.1.2"}
+{"v":1,"ok":true,"state":"locked","message":"locked","helperVersion":"0.2.0"}
 ```
 
 Both sides check the peer UID. The client reports `helper_version_mismatch`
 and asks for `sparekey setup` when versions differ.
+
+The 0.2.0 CLI sends `v:2` for `unlock`, with a `noCover` flag. The helper also
+accepts old `v:1` unlock requests and covers them by default. An older helper
+rejects `v:2` before password submission; the CLI reports
+`helper_version_mismatch` and asks for `sparekey setup`.
 
 ## Safety rules carried over from the MVP
 
@@ -166,6 +171,23 @@ and asks for `sparekey setup` when versions differ.
   relocks leaves the Mac unlocked for up to an hour plus whatever those
   settings allow. If creating the assertion fails, unlock still succeeds and
   the message says the display could not be kept awake.
+- **Hidden account recovery.** If the awake login screen has no verified account
+  label after about 1.5 seconds, `prepare()` makes one bounded display
+  sleep/wake attempt with `pmset displaysleepnow` and remote user activity,
+  then polls again. It never sends mouse or keyboard input for this recovery.
+  An AX window recreated after wake is re-baselined only when the loginwindow
+  process identity is unchanged; all account and field checks still apply.
+
+## Physical cover
+
+For a covered unlock, the helper orders a borderless black panel on every
+display before reading the credential or submitting it. The lock screen stays
+above the panels until it dismisses. Panels exclude screen capture; the black
+panels pass mouse input through, while a separate small button panel accepts
+a click to lock. AppKit runs on the main thread, and socket and button
+operations share a serial queue. Failed unlocks remove the pending cover; a
+confirmed unlock binds it to the AwakeHold watcher token. Lock, external
+relock, and the hold deadline remove only the cover owned by that token.
 
 ## Lock method
 
