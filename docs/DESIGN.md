@@ -71,8 +71,13 @@ waiting for it, so setup must detect and recover from a lost grant or ACL.
 - If the refreshed helper cannot read the saved credential, for example
   because the item is partitioned by `cdhash`, setup asks for the password
   again instead of failing.
-- If Accessibility is missing after a refresh, setup and `doctor` print the
-  exact path to re-enable.
+- If Accessibility is missing after a refresh, setup offers to open the
+  Accessibility pane, reveal the stable copy, and recheck after a helper
+  restart; `doctor` prints the fix under the failing row.
+- Setup failures and captured tool output go to stderr; progress goes to stdout.
+- `doctor` fails only required checks. Skill targets that are not installed
+  are `skip`; an installed skill that differs, or an unsafe skill path, is `fail`. `--json` adds
+  `statuses` (`ok|warn|fail|skip`) beside the boolean `checks` map.
 
 ## Command surface
 

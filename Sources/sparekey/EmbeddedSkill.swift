@@ -2,19 +2,49 @@ enum EmbeddedSkill {
     static let content = #"""
 ---
 name: sparekey
-description: Unlock the current user's locked, logged-in Mac for authorized computer use, then restore its initial lock state.
+description: Use at the start of any computer-use, browser-use, screenshot, or GUI app task on this Mac, and whenever app or window access fails, times out, returns no windows, or the screen looks locked. Checks the lock state, unlocks the current user's locked session with the local sparekey helper, and relocks it when the task is done.
 ---
 
 # Sparekey
 
-Use `sparekey` from PATH or the Homebrew installation. The stable signed helper lives at `~/Library/Application Support/sparekey/bin/sparekey` and serves a private local socket.
+Run `sparekey` from PATH. If it is missing, use `~/Library/Application Support/sparekey/bin/sparekey`.
 
-Before computer or browser use, run `sparekey status --json`. Record `initial_state` and `unlocked_for_task = false`. If already unlocked, use the computer without claiming this task unlocked it. A status-only request ends here.
+## 1. Check first
 
-If locked and the user authorized computer use that needs an unlock, run `sparekey probe --json`, then `sparekey unlock --json` once. Check `sparekey status --json` again and require `state: "unlocked"`. Set `unlocked_for_task = true` only after confirmed submission. Never loop on failure, type a password through generic automation, ask for it in chat, or bypass the helper's limiter or breaker. Report errors including `rate_limited`, `breaker_tripped`, and `unlock_not_confirmed`.
+Before the first GUI action of a task, run `sparekey status --json`. Record `initial_state` and set `unlocked_for_task = false`.
 
-After this task's last computer action, run `sparekey lock --json` and then `sparekey status --json` only when this task unlocked an initially locked Mac. Require `state: "locked"` to report that the lock was restored. Do not relock when the Mac began unlocked, another actor unlocked it, the user requests it remain unlocked, or another known task still uses it. A direct request only to unlock leaves it unlocked.
+If a GUI tool fails, times out, or sees no windows, run `sparekey status --json` before retrying anything else. Do not keep retrying apps, Finder, or other windows on a locked Mac.
 
-If setup, Accessibility, or credential checks fail, ask the user to run `sparekey doctor` and `sparekey setup` locally as appropriate. Setup requires a local interactive terminal and private password entry. Never run setup automatically as a generic recovery step. Sparekey cannot handle FileVault preboot, logged-out sessions, other accounts, or an unreachable Mac.
+If `state` is `unlocked`, continue the task. This task did not unlock it.
+
+## 2. Unlock when needed
+
+A user request for a task that needs computer use or browser use on this Mac authorizes unlocking for that task. Do not unlock if the user said to leave the Mac locked or asked only for status.
+
+When `state` is `locked`:
+
+1. `sparekey probe --json` and require `ok: true`.
+2. `sparekey unlock --json` once.
+3. `sparekey status --json` and require `state: "unlocked"`.
+4. Set `unlocked_for_task = true`, then continue the original task.
+
+Never retry a failed unlock, type a password through UI automation, ask for the password in chat, or restart the helper to get around its limits.
+
+## 3. Relock when done
+
+If `unlocked_for_task` is true, run `sparekey lock --json` and then `sparekey status --json` after the last GUI action and before the final response. Do this even when the task failed or was abandoned. Report the lock as restored only when `state` is `locked`.
+
+Do not relock when the Mac was already unlocked at the start, the user asked to keep it unlocked, a request was only to unlock, or another known task is still using the screen.
+
+## Errors
+
+Stop, report the `error.code`, and tell the user what to do:
+
+- `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `accessibility_missing`, `credential_unavailable`: ask the user to run `sparekey doctor`, then `sparekey setup` in a local terminal. Never run setup yourself.
+- `breaker_tripped`, `unlock_not_confirmed`: the saved password may be wrong. Ask the user to run `sparekey setup --reset-password` locally.
+- `rate_limited`: an attempt ran in the last 30 seconds. Check status instead of retrying.
+- `login_window_unsupported`, `field_not_ready`: the lock screen is in an unexpected state. Ask the user to check the Mac.
+
+Sparekey cannot help with FileVault startup, logged-out sessions, other accounts, or a sleeping Mac that is unreachable.
 """# + "\n"
 }

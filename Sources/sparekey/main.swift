@@ -79,12 +79,13 @@ do {
     case .continueSetup:
         try Setup.localTTY()
         guard Bundle.main.executableURL?.resolvingSymlinksInPath().path == Paths.stable else { throw SparekeyError("Setup continuation requires stable copy.") }
-        try Setup.stableContinuation()
+        exit(Setup.stableContinuation())
     case .setup: try Setup.run(invocation)
     case .uninstall: try Uninstall.run()
     case .skill:
         let targets = try invocation.agent.map { [$0] } ?? Skills.prompt()
-        try Skills.install(targets, force: invocation.force)
+        for target in targets { try Skills.installAndReport(target, force: invocation.force) }
+        if targets.isEmpty { Console.row(.info, "Agent skills", "none selected") }
     case .doctor: Doctor.run(json: invocation.json)
     case .unlock, .lock, .status, .probe:
         let reply = try Transport.request(command.rawValue)
@@ -93,6 +94,8 @@ do {
         else { print(reply.state ?? reply.message ?? "Completed.") }
     default: break
     }
+} catch let reported as ReportedFailure {
+    fail(reported.issue, command: command.rawValue, json: invocation.json, exitCode: reported.issue.code == "usage" ? 2 : 1)
 } catch {
     let issue = error as? SparekeyError ?? SparekeyError("Operation failed.")
     fail(issue, command: command.rawValue, json: invocation.json, exitCode: issue.code == "usage" ? 2 : 1)
