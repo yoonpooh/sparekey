@@ -114,7 +114,7 @@ Asking for GUI work counts as permission to unlock for that task. Tell the agent
 
 | Command | What it does |
 | --- | --- |
-| `sparekey unlock` | Unlock once and confirm the state |
+| `sparekey unlock` | Unlock once, confirm the state, and keep the display awake until `lock` or 60 minutes |
 | `sparekey lock` | Lock and confirm; already locked is a no-op |
 | `sparekey status` | Print `locked` or `unlocked` |
 | `sparekey probe` | Wake the display and check the password field without reading the password |
