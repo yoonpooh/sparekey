@@ -15,13 +15,16 @@ public struct SparekeyError: Error, CustomStringConvertible {
 
 public enum PreparationRetry {
     public static func run<T>(deadline: TimeInterval,
+                              attemptIfExpired: Bool = true,
+                              acceptLateResult: Bool = true,
                               now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
                               sleep: (TimeInterval) -> Void = { Thread.sleep(forTimeInterval: $0) },
                               onTransient: () -> Void, attempt: () throws -> T?) throws -> T? {
+        if !attemptIfExpired && now() >= deadline { return nil }
         var lastError: SparekeyError?
         repeat {
             do {
-                if let result = try attempt() { return result }
+                if let result = try attempt(), acceptLateResult || now() < deadline { return result }
                 lastError = nil
             } catch let error as SparekeyError where error.transient {
                 lastError = error
@@ -45,6 +48,7 @@ public struct Invocation {
     public let skillTargets: [String]?
     public let agent: String?
     public let force: Bool
+    public let noCover: Bool
     public static func parse(_ args: [String]) throws -> Invocation {
         func usage(_ message: String = "Invalid arguments. Run 'sparekey help'.") -> SparekeyError { SparekeyError(message, code: "usage") }
         var words = args
@@ -58,9 +62,9 @@ public struct Invocation {
             let target = words.first.flatMap { Command(rawValue: $0.lowercased()) } ?? .help
             if words.count == 1 && target == .help && words[0].lowercased() != "help" { throw usage() }
             guard ![.serve, .continueSetup, .ttyProbe, .ttyProbeChild, .testImport, .credentialHandoff].contains(target) else { throw usage() }
-            return Invocation(command: .help, json: false, helpFor: target, identity: nil, resetPassword: false, noSkill: false, skillTargets: nil, agent: nil, force: false)
+            return Invocation(command: .help, json: false, helpFor: target, identity: nil, resetPassword: false, noSkill: false, skillTargets: nil, agent: nil, force: false, noCover: false)
         }
-        var json = false, reset = false, noSkill = false, force = false
+        var json = false, reset = false, noSkill = false, force = false, noCover = false
         var identity: String?, agent: String?
         var skillTargets: [String]?
         var position = 0
@@ -72,6 +76,7 @@ public struct Invocation {
             let word = words[position]
             switch word {
             case "--json" where [.unlock, .lock, .status, .probe, .doctor].contains(command) && !json: json = true
+            case "--no-cover" where command == .unlock && !noCover: noCover = true
             case "--reset-password" where (command == .setup || command == .continueSetup) && !reset: reset = true
             case "--no-skill" where command == .setup && !noSkill: noSkill = true
             case "--skill" where command == .setup:
@@ -87,7 +92,7 @@ public struct Invocation {
             position += 1
         }
         guard !(noSkill && skillTargets != nil) else { throw usage("--skill and --no-skill cannot be combined.") }
-        return Invocation(command: command, json: json, helpFor: nil, identity: identity, resetPassword: reset, noSkill: noSkill, skillTargets: skillTargets, agent: agent, force: force)
+        return Invocation(command: command, json: json, helpFor: nil, identity: identity, resetPassword: reset, noSkill: noSkill, skillTargets: skillTargets, agent: agent, force: force, noCover: noCover)
     }
 }
 
@@ -105,7 +110,23 @@ public struct Envelope: Codable {
         self.ok = false; self.command = command; self.state = nil; self.message = nil; self.error = ErrorBody(code: code, message: message)
     }
 }
-public struct Request: Codable { public let v: Int; public let command: String; public init(_ command: String) { v = 1; self.command = command } }
+public struct Request: Codable {
+    public let v: Int
+    public let command: String
+    public let noCover: Bool
+    // v2 makes a new unlock fail at an older helper before it can submit a password.
+    public init(_ command: String, noCover: Bool = false) { v = command == "unlock" ? 2 : 1; self.command = command; self.noCover = noCover }
+    public var isSupportedByCoverHelper: Bool {
+        (v == 1 && !noCover) || (v == 2 && command == "unlock")
+    }
+    private enum CodingKeys: String, CodingKey { case v, command, noCover }
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.container(keyedBy: CodingKeys.self)
+        v = try fields.decode(Int.self, forKey: .v)
+        command = try fields.decode(String.self, forKey: .command)
+        noCover = try fields.decodeIfPresent(Bool.self, forKey: .noCover) ?? false
+    }
+}
 public struct Reply: Codable {
     public let v: Int
     public let ok: Bool
@@ -116,10 +137,10 @@ public struct Reply: Codable {
     public let accessibility: Bool?
     public let credentialReadable: Bool?
     public init(state: String? = nil, message: String, accessibility: Bool? = nil, credentialReadable: Bool? = nil) {
-        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.1.2"; self.accessibility = accessibility; self.credentialReadable = credentialReadable
+        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.2.0"; self.accessibility = accessibility; self.credentialReadable = credentialReadable
     }
     public init(code: String, message: String) {
-        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.1.2"; accessibility = nil; credentialReadable = nil
+        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.2.0"; accessibility = nil; credentialReadable = nil
     }
 }
 

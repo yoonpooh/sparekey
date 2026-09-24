@@ -16,7 +16,7 @@ include a real password.
 - Any process running as your user can ask the helper to unlock. Sparekey is
   for a trusted personal account, not protection from malware already running
   as you.
-- Unlocking makes the physical screen visible to anyone nearby.
+- Before a covered unlock submits the password, Sparekey places a black cover beneath the lock screen; it hides the physical screen when the lock screen dismisses. The cover is not a lock: someone at the Mac can still interact blindly or click Lock Mac. `unlock --no-cover` leaves the screen visible.
 - The password briefly exists in helper memory. Full zeroization of Swift and
   CoreFoundation copies cannot be guaranteed.
 - The helper listens only on a user-private Unix socket, never on the network.

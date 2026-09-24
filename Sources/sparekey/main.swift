@@ -1,13 +1,14 @@
 import Foundation
 import Darwin
 import SparekeyCore
+import AppKit
 
 let help = """
-sparekey 0.1.2 — unlock and relock this user's logged-in Mac
+sparekey 0.2.0 — unlock and relock this user's logged-in Mac
 
 Usage:
   sparekey                  Show help
-  sparekey unlock [--json]  Unlock once and verify
+  sparekey unlock [--json] [--no-cover]  Unlock once and verify; cover displays by default
   sparekey lock [--json]    Lock and verify
   sparekey status [--json]  Read lock state
   sparekey probe [--json]   Verify login field without a password
@@ -41,7 +42,7 @@ if command == .help {
     else { print(help) }
     exit(0)
 }
-if command == .version { print("sparekey 0.1.2"); exit(0) }
+if command == .version { print("sparekey 0.2.0"); exit(0) }
 do {
     guard getuid() != 0, getuid() == geteuid() else { throw SparekeyError("Run as your regular user, without sudo.") }
     switch command {
@@ -75,7 +76,16 @@ do {
         #endif
     case .serve:
         _ = try Screen.locked()
-        try Transport.serve()
+        let app = NSApplication.shared
+        app.setActivationPolicy(.prohibited)
+        DispatchQueue.global(qos: .userInitiated).async {
+            do { try Transport.serve() }
+            catch {
+                FileHandle.standardError.write(Data(("Helper stopped: \(error)\n").utf8))
+                DispatchQueue.main.async { app.terminate(nil) }
+            }
+        }
+        app.run()
     case .continueSetup:
         try Setup.localTTY()
         guard Bundle.main.executableURL?.resolvingSymlinksInPath().path == Paths.stable else { throw SparekeyError("Setup continuation requires stable copy.") }
@@ -89,7 +99,7 @@ do {
         if targets.isEmpty { Console.row(.info, "Agent skills", "none selected") }
     case .doctor: Doctor.run(json: invocation.json)
     case .unlock, .lock, .status, .probe:
-        let reply = try Transport.request(command.rawValue)
+        let reply = try Transport.request(command.rawValue, noCover: invocation.noCover)
         guard reply.ok else { throw SparekeyError(reply.error?.message ?? "Helper operation failed.", code: reply.error?.code ?? "internal") }
         if invocation.json { printJSON(Envelope(command: command.rawValue, state: reply.state, message: reply.message ?? "Completed.")) }
         else { print(reply.state ?? reply.message ?? "Completed.") }

@@ -4,6 +4,7 @@ import IOKit.pwr_mgt
 import Security
 import SystemConfiguration
 import SparekeyCore
+import Darwin
 
 enum Screen {
     static var submitted = false
@@ -162,52 +163,157 @@ enum Screen {
             && CFEqual(a.elements[0], b.elements[0])
     }
 
+    private static func revealAccount(activity: inout IOPMAssertionID, slept: inout Bool, woke: inout Bool) throws {
+        if activity != 0 { IOPMAssertionRelease(activity); activity = 0 }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
+        process.arguments = ["displaysleepnow"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do { try process.run() }
+        catch { throw SparekeyError("Could not start display sleep recovery.", code: "field_not_ready") }
+        let processDeadline = ProcessInfo.processInfo.systemUptime + 1.5
+        while process.isRunning && ProcessInfo.processInfo.systemUptime < processDeadline {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        if process.isRunning {
+            process.terminate()
+            let terminateDeadline = ProcessInfo.processInfo.systemUptime + 0.15
+            while process.isRunning && ProcessInfo.processInfo.systemUptime < terminateDeadline {
+                Thread.sleep(forTimeInterval: 0.02)
+            }
+            if process.isRunning {
+                _ = Darwin.kill(process.processIdentifier, SIGKILL)
+                let killDeadline = ProcessInfo.processInfo.systemUptime + 0.15
+                while process.isRunning && ProcessInfo.processInfo.systemUptime < killDeadline {
+                    Thread.sleep(forTimeInterval: 0.02)
+                }
+            }
+            throw SparekeyError("Display sleep recovery timed out.", code: "field_not_ready")
+        }
+        guard process.terminationStatus == 0 else {
+            throw SparekeyError("Display sleep recovery failed (pmset exit \(process.terminationStatus)).", code: "field_not_ready")
+        }
+        let sleepDeadline = ProcessInfo.processInfo.systemUptime + 2.0
+        repeat {
+            if CGDisplayIsAsleep(CGMainDisplayID()) != 0 { slept = true; break }
+            Thread.sleep(forTimeInterval: 0.05)
+        } while ProcessInfo.processInfo.systemUptime < sleepDeadline
+        guard IOPMAssertionDeclareUserActivity("sparekey remote unlock recovery" as CFString,
+                                               kIOPMUserActiveRemote, &activity) == kIOReturnSuccess else {
+            throw SparekeyError("Could not wake the display after recovery.", code: "field_not_ready")
+        }
+        if slept {
+            let wakeDeadline = ProcessInfo.processInfo.systemUptime + 1.0
+            repeat {
+                if CGDisplayIsAsleep(CGMainDisplayID()) == 0 { woke = true; break }
+                Thread.sleep(forTimeInterval: 0.05)
+            } while ProcessInfo.processInfo.systemUptime < wakeDeadline
+        }
+    }
+
     static func prepare() throws -> Snapshot {
         var activity: IOPMAssertionID = 0
-        guard IOPMAssertionDeclareUserActivity("sparekey remote unlock" as CFString, kIOPMUserActiveRemote, &activity) == kIOReturnSuccess else {
-            throw SparekeyError("Could not wake the display.")
-        }
-        defer { IOPMAssertionRelease(activity) }
-        let deadline = ProcessInfo.processInfo.systemUptime + 5
+        defer { if activity != 0 { IOPMAssertionRelease(activity) } }
+        let started = ProcessInfo.processInfo.systemUptime
+        let firstDeadline = started + 1.5
+        let ordinaryDeadline = started + 5
+        // Leave room for one snapshot that starts just before the deadline and overruns it.
+        let overallDeadline = started + 13.5
+        let snapshotAllowance = 4.0
         var previous: Snapshot?
         var consecutive = false
         var revealed = false
         var lastState = LoginPolicy.Preparation.waitingForAccount
-        // Keep window identity across failures, but require fresh consecutive observations for Return.
-        if let ready = try PreparationRetry.run(deadline: deadline, onTransient: { consecutive = false }, attempt: {
-            let current = try snapshot()
-            let state = try LoginPolicy.preparation(in: current.nodes, ownLabel: current.ownLabel)
-            if let previous, !sameWindow(previous, current) {
-                throw SparekeyError("The login window changed during preparation. No password was submitted.", code: "login_window_unsupported")
+        var sawOwnLabel = false
+        var recoveryAttempted = false, slept = false, woke = false, rebaselineNext = false
+        var lastTransient: SparekeyError?
+        func recoveryReport() -> String {
+            "Display recovery: \(recoveryAttempted ? "attempted" : "not attempted"); slept=\(slept); woke=\(woke)."
+        }
+        do {
+            guard IOPMAssertionDeclareUserActivity("sparekey remote unlock" as CFString,
+                                                   kIOPMUserActiveRemote, &activity) == kIOReturnSuccess else {
+                throw SparekeyError("Could not wake the display.")
             }
-            if state == .ready { return current }
-            // Require two matching, verified collapsed snapshots before sending Return.
-            // Never send Return to a disabled field or an unrecognized account screen.
-            if state == .collapsed, !revealed, consecutive, let previous,
-               previous.ownLabel, previous.nodes.count == current.nodes.count,
-               zip(previous.nodes, current.nodes).allSatisfy({
-                   $0.identifier == $1.identifier && $0.role == $1.role && $0.subrole == $1.subrole
-               }),
-               try LoginPolicy.preparation(in: previous.nodes, ownLabel: previous.ownLabel) == .collapsed {
-                guard let down = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: true),
-                      let up = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: false) else {
-                    throw SparekeyError("Could not prepare the non-secret wake key.")
+            func poll(until deadline: TimeInterval) throws -> Snapshot? {
+                let effectiveDeadline = min(deadline, overallDeadline - snapshotAllowance)
+                return try PreparationRetry.run(deadline: effectiveDeadline, attemptIfExpired: false,
+                                                acceptLateResult: false, onTransient: { consecutive = false }, attempt: {
+                    let current = try snapshot()
+                    // A snapshot begun in time may finish late; never accept it or send Return after the phase deadline.
+                    guard ProcessInfo.processInfo.systemUptime < effectiveDeadline else { return nil }
+                    let state = try LoginPolicy.preparation(in: current.nodes, ownLabel: current.ownLabel)
+                    if let previous {
+                        if rebaselineNext {
+                            // Sleep/wake may recreate AX elements, but never trust a replacement loginwindow process.
+                            guard previous.pid == current.pid, previous.started == current.started,
+                                  previous.microseconds == current.microseconds else {
+                                throw SparekeyError("The login process changed during display recovery. No password was submitted.", code: "login_window_unsupported")
+                            }
+                            rebaselineNext = false
+                            consecutive = false
+                        } else if !sameWindow(previous, current) {
+                            throw SparekeyError("The login window changed during preparation. No password was submitted.", code: "login_window_unsupported")
+                        }
+                    }
+                    sawOwnLabel = sawOwnLabel || current.ownLabel
+                    if state == .ready { return current }
+                    // Require two matching, verified collapsed snapshots before sending Return.
+                    // Never send Return to a disabled field or an unrecognized account screen.
+                    if state == .collapsed, !revealed, consecutive, let previous,
+                       previous.ownLabel, previous.nodes.count == current.nodes.count,
+                       zip(previous.nodes, current.nodes).allSatisfy({
+                           $0.identifier == $1.identifier && $0.role == $1.role && $0.subrole == $1.subrole
+                       }),
+                       try LoginPolicy.preparation(in: previous.nodes, ownLabel: previous.ownLabel) == .collapsed {
+                        guard ProcessInfo.processInfo.systemUptime < effectiveDeadline else { return nil }
+                        guard let down = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: true),
+                              let up = CGEvent(keyboardEventSource: nil, virtualKey: 36, keyDown: false) else {
+                            throw SparekeyError("Could not prepare the non-secret wake key.")
+                        }
+                        down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
+                        revealed = true
+                    }
+                    previous = current
+                    consecutive = true
+                    lastState = state
+                    return nil
+                })
+            }
+            func phase(until deadline: TimeInterval) throws -> Snapshot? {
+                lastTransient = nil
+                do { return try poll(until: deadline) }
+                catch let issue as SparekeyError where issue.transient {
+                    lastTransient = issue
+                    return nil
                 }
-                down.post(tap: .cghidEventTap); up.post(tap: .cghidEventTap)
-                revealed = true
             }
-            previous = current
-            consecutive = true
-            lastState = state
-            return nil
-        }) { return ready }
-        switch lastState {
-        case .waitingForAccount:
-            throw SparekeyError("The current-account label did not become available within 5 seconds. No password was submitted.", code: "field_not_ready")
-        case .waitingForField:
-            throw SparekeyError("The secure password field remained disabled or read-only for 5 seconds. No password was submitted.", code: "field_not_ready")
-        default:
-            throw SparekeyError("The password field did not appear after preparing the verified account screen within 5 seconds. No password was submitted.", code: "field_not_ready")
+            if let ready = try phase(until: firstDeadline) { return ready }
+            if DisplayRevealPolicy.shouldRecover(elapsed: ProcessInfo.processInfo.systemUptime - started,
+                                                 state: lastState, sawOwnLabel: sawOwnLabel,
+                                                 attempted: recoveryAttempted) {
+                recoveryAttempted = true
+                try revealAccount(activity: &activity, slept: &slept, woke: &woke)
+                rebaselineNext = true
+                consecutive = false
+                if let ready = try phase(until: ProcessInfo.processInfo.systemUptime + 4.5) { return ready }
+            } else if let ready = try phase(until: ordinaryDeadline) {
+                return ready
+            }
+            if let lastTransient { throw lastTransient }
+            switch lastState {
+            case .waitingForAccount:
+                throw SparekeyError("The current-account label did not become available. No password was submitted.", code: "field_not_ready")
+            case .waitingForField:
+                throw SparekeyError("The secure password field remained disabled or read-only. No password was submitted.", code: "field_not_ready")
+            default:
+                throw SparekeyError("The password field did not appear after preparing the verified account screen. No password was submitted.", code: "field_not_ready")
+            }
+        } catch let issue as SparekeyError {
+            throw SparekeyError("\(issue.description) \(recoveryReport())", code: issue.code)
+        } catch {
+            throw SparekeyError("Display preparation failed. \(recoveryReport())")
         }
     }
 
@@ -221,14 +327,15 @@ enum Screen {
         return next
     }
 
-    static func unlock() throws {
+    static func unlock(beforeFill: () throws -> Void = {}) throws {
         submitted = false
         let target = try prepare()
         let field = try LoginPolicy.field(in: target.nodes)
+        _ = try validate(target, field: field)
+        try beforeFill()
         var password = try Credentials.read()
         defer { password.resetBytes(in: password.startIndex..<password.endIndex) }
         guard !password.isEmpty else { throw SparekeyError("The saved credential is invalid.", code: "credential_unavailable") }
-        _ = try validate(target, field: field)
         defer {
             if (try? validate(target, field: field)) != nil {
                 _ = AXUIElementSetAttributeValue(target.elements[field], kAXValueAttribute as CFString, "" as CFString)
@@ -239,6 +346,7 @@ enum Screen {
             guard let text = String(data: password, encoding: .utf8), !text.isEmpty else {
                 throw SparekeyError("The saved credential is invalid.", code: "credential_unavailable")
             }
+            _ = try validate(target, field: field)
             fillStatus = AXUIElementSetAttributeValue(target.elements[field], kAXValueAttribute as CFString, text as CFString)
         }
         guard fillStatus == .success else { throw SparekeyError("Could not fill the verified password field.", code: "field_not_ready") }

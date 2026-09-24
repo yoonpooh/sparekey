@@ -26,13 +26,13 @@ When `state` is `locked`:
 3. `sparekey status --json` and require `state: "unlocked"`.
 4. Set `unlocked_for_task = true`, then continue the original task.
 
-After a successful unlock the helper keeps the display awake until `sparekey lock` or 60 minutes, whichever comes first, so idle display sleep does not relock the Mac mid-task. If the Mac relocks later in the task anyway, repeat steps 1-3 once, at least 30 seconds after the last unlock.
+For a covered unlock, the helper places a black cover beneath the lock screen before password submission, so it is already in place when the lock screen dismisses. It is intentionally invisible in screenshots, and clicks and typing still reach the apps underneath. The helper keeps the display awake until `sparekey lock` or 60 minutes, whichever comes first, so idle display sleep does not relock the Mac mid-task. If the Mac relocks later in the task, stop and report it. The user may have clicked the cover's Lock Mac button; do not unlock again for this task.
 
 Never retry a failed unlock, type a password through UI automation, ask for the password in chat, or restart the helper to get around its limits.
 
 ## 3. Relock when done
 
-If `unlocked_for_task` is true, run `sparekey lock --json` and then `sparekey status --json` after the last GUI action and before the final response. Do this even when the task failed or was abandoned. Report the lock as restored only when `state` is `locked`.
+If `unlocked_for_task` is true and `sparekey status --json` still says `unlocked`, run `sparekey lock --json` and then `sparekey status --json` after the last GUI action and before the final response. Do this even when the task failed or was abandoned. Report the lock as restored only when `state` is `locked`.
 
 Do not relock when the Mac was already unlocked at the start, the user asked to keep it unlocked, a request was only to unlock, or another known task is still using the screen.
 

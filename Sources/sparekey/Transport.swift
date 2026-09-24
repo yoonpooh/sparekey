@@ -4,6 +4,8 @@ import ApplicationServices
 import SparekeyCore
 
 enum Transport {
+    private static let operations = DispatchQueue(label: "sparekey.operations")
+    private static var coverAttempt: UInt64 = 0 // Accessed only on operations.
     static func address<T>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> T) throws -> T {
         var address = sockaddr_un()
         address.sun_family = sa_family_t(AF_UNIX)
@@ -49,7 +51,7 @@ enum Transport {
         }
         throw SparekeyError("Helper message too large.")
     }
-    static func request(_ command: String) throws -> Reply {
+    static func request(_ command: String, noCover: Bool = false) throws -> Reply {
         try Paths.checkedDirectory(Paths.base, create: false)
         try Paths.checkedDirectory(Paths.run, create: false)
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -58,9 +60,12 @@ enum Transport {
         configure(fd, seconds: 20)
         guard try address({ connect(fd, $0, $1) }) == 0 else { throw SparekeyError("Helper is not running. Run 'sparekey setup'.", code: "helper_not_running") }
         try verifyPeer(fd)
-        try send(Request(command), to: fd)
+        try send(Request(command, noCover: noCover), to: fd)
         let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))
-        guard reply.v == 1, reply.helperVersion == "0.1.2" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        guard reply.v == 1, reply.helperVersion == "0.2.0" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        if command == "unlock", reply.error?.code == "usage" {
+            throw SparekeyError("The installed helper does not support covered unlocks. Run 'sparekey setup' to update it.", code: "helper_version_mismatch")
+        }
         return reply
     }
     static func serve() throws {
@@ -92,10 +97,11 @@ enum Transport {
                 do {
                     try verifyPeer(peer)
                     let request = try JSONDecoder().decode(Request.self, from: receive(peer, limit: 256))
-                    guard request.v == 1, ["status", "probe", "unlock", "lock", "check"].contains(request.command) else {
+                    guard request.isSupportedByCoverHelper,
+                          ["status", "probe", "unlock", "lock", "check"].contains(request.command) else {
                         throw SparekeyError("Unsupported helper request.", code: "usage")
                     }
-                    let reply = try handle(request.command)
+                    let reply = try operations.sync { try handle(request.command, noCover: request.noCover) }
                     try send(reply, to: peer)
                 } catch {
                     let issue = error as? SparekeyError ?? SparekeyError("Helper operation failed.")
@@ -104,8 +110,7 @@ enum Transport {
             }
         }
     }
-    static func handle(_ command: String) throws -> Reply {
-        if command == "lock" { AwakeHold.release() }
+    static func handle(_ command: String, noCover: Bool) throws -> Reply {
         let locked = try Screen.locked()
         switch command {
         case "check":
@@ -115,21 +120,56 @@ enum Transport {
         case "status": return Reply(state: locked ? "locked" : "unlocked", message: locked ? "locked" : "unlocked")
         case "lock":
             if !locked { try Screen.lock() }
+            AwakeHold.release()
+            CoverOverlay.scheduleHide()
             return Reply(state: "locked", message: locked ? "Already locked." : "Computer locked.")
         case "probe":
             if !locked { return Reply(state: "unlocked", message: "Already unlocked.") }
             _ = try Screen.prepare()
             return Reply(state: "locked", message: "Password field verified. No password was read or submitted.")
         case "unlock":
-            if !locked { return Reply(state: "unlocked", message: "Already unlocked.") }
+            if !locked {
+                if noCover { CoverOverlay.scheduleHide() }
+                return Reply(state: "unlocked", message: "Already unlocked.")
+            }
             var state = try StateFile.read()
-            try UnlockAttempt.run(state: &state, now: Date().timeIntervalSince1970,
-                                  persist: StateFile.write, submit: Screen.unlock, wasSubmitted: { Screen.submitted })
-            let held = AwakeHold.start()
-            return Reply(state: "unlocked", message: held
+            coverAttempt &+= 1
+            let attempt = coverAttempt
+            do {
+                try UnlockAttempt.run(state: &state, now: Date().timeIntervalSince1970,
+                                      persist: StateFile.write, submit: {
+                    try Screen.unlock(beforeFill: {
+                        guard !noCover else { return }
+                        let ordered = DispatchSemaphore(value: 0)
+                        var panelsOrdered = false
+                        CoverOverlay.schedulePendingShow(attempt: attempt) { result in
+                            panelsOrdered = result
+                            ordered.signal()
+                        }
+                        if ordered.wait(timeout: .now() + 1) != .success || !panelsOrdered {
+                            throw SparekeyError("The privacy cover could not be shown. Try 'sparekey unlock --no-cover' if you want to proceed without it.", code: "cover_unavailable")
+                        }
+                    })
+                }, wasSubmitted: { Screen.submitted })
+            } catch {
+                if !noCover { CoverOverlay.scheduleHide(attempt: attempt) }
+                throw error
+            }
+            let hold = AwakeHold.start(onEnd: { token in
+                CoverOverlay.scheduleHide(token: token)
+            })
+            if !noCover { CoverOverlay.scheduleBind(attempt: attempt, token: hold.token) }
+            return Reply(state: "unlocked", message: hold.held
                 ? "Computer unlocked. Display kept awake until lock, for up to \(AwakeHold.seconds / 60) minutes."
                 : "Computer unlocked, but the display could not be kept awake. Idle display sleep may relock it.")
         default: throw SparekeyError("Unsupported helper request.", code: "usage")
+        }
+    }
+
+    static func lockFromButton() {
+        operations.async {
+            do { _ = try handle("lock", noCover: false) }
+            catch { FileHandle.standardError.write(Data(("Lock Mac failed: \(error)\n").utf8)) }
         }
     }
 }
