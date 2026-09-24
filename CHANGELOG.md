@@ -5,6 +5,8 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-24
+
 - Retry transient login-screen inspection failures during the existing five-second preparation window, with distinct inspection-limit diagnostics and unchanged security checks.
 - Keep the display awake after a confirmed unlock until `sparekey lock`, any other relock, or 60 minutes. Before, idle display sleep could relock the Mac minutes into an agent task because unlocking does not reset the idle timer.
 
