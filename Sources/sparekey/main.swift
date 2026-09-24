@@ -80,6 +80,7 @@ do {
         try Setup.localTTY()
         guard Bundle.main.executableURL?.resolvingSymlinksInPath().path == Paths.stable else { throw SparekeyError("Setup continuation requires stable copy.") }
         exit(Setup.stableContinuation())
+    case .credentialHandoff: try Handoff.receive()
     case .setup: try Setup.run(invocation)
     case .uninstall: try Uninstall.run()
     case .skill:

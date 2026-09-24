@@ -5,6 +5,8 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+- Keep the saved password across upgrades. Setup has the running helper hand it to the re-signed helper, which re-saves it under its own Keychain partition. Upgrading from 0.1.1 or earlier still asks once.
+
 ## [0.1.1] - 2026-09-24
 
 - Retry transient login-screen inspection failures during the existing five-second preparation window, with distinct inspection-limit diagnostics and unchanged security checks.

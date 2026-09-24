@@ -6,6 +6,8 @@ import SparekeyCore
 enum Credentials {
     static let service = Paths.identifier
     static var account: String { "uid:\(getuid())" }
+    // Interaction-allowed is process-wide; reads may come from the socket and XPC queues at once.
+    private static let readLock = NSLock()
     static func replace(password: Data) throws {
         var trusted: SecTrustedApplication?
         guard SecTrustedApplicationCreateFromPath(Paths.stable, &trusted) == errSecSuccess, let trusted else {
@@ -26,6 +28,8 @@ enum Credentials {
         guard status == errSecSuccess else { throw SparekeyError("Keychain save failed (OSStatus \(status)).", code: "credential_unavailable") }
     }
     static func read() throws -> Data {
+        readLock.lock()
+        defer { readLock.unlock() }
         SecKeychainSetUserInteractionAllowed(false)
         defer { SecKeychainSetUserInteractionAllowed(true) }
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,

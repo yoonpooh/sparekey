@@ -71,6 +71,7 @@ enum Transport {
         guard lock >= 0 else { throw SparekeyError("Cannot open helper lock.") }
         defer { close(lock) }
         guard flock(lock, LOCK_EX | LOCK_NB) == 0 else { throw SparekeyError("Helper already running.") }
+        Handoff.listen()
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw SparekeyError("Cannot create helper socket.") }
         defer { close(fd) }

@@ -1,7 +1,7 @@
 import Foundation
 
 public enum Command: String, Codable, CaseIterable {
-    case unlock, lock, status, probe, setup, doctor, skill, uninstall, help, version, serve, continueSetup = "setup-continue", ttyProbe = "tty-probe", ttyProbeChild = "tty-probe-child", testImport = "test-import"
+    case unlock, lock, status, probe, setup, doctor, skill, uninstall, help, version, serve, continueSetup = "setup-continue", ttyProbe = "tty-probe", ttyProbeChild = "tty-probe-child", testImport = "test-import", credentialHandoff = "credential-handoff"
 }
 
 public struct SparekeyError: Error, CustomStringConvertible {
@@ -57,7 +57,7 @@ public struct Invocation {
             guard words.count <= 1 else { throw usage() }
             let target = words.first.flatMap { Command(rawValue: $0.lowercased()) } ?? .help
             if words.count == 1 && target == .help && words[0].lowercased() != "help" { throw usage() }
-            guard ![.serve, .continueSetup, .ttyProbe, .ttyProbeChild, .testImport].contains(target) else { throw usage() }
+            guard ![.serve, .continueSetup, .ttyProbe, .ttyProbeChild, .testImport, .credentialHandoff].contains(target) else { throw usage() }
             return Invocation(command: .help, json: false, helpFor: target, identity: nil, resetPassword: false, noSkill: false, skillTargets: nil, agent: nil, force: false)
         }
         var json = false, reset = false, noSkill = false, force = false

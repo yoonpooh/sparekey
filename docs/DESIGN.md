@@ -68,9 +68,23 @@ waiting for it, so setup must detect and recover from a lost grant or ACL.
   read the password.
 - `sparekey setup --identity <name>` signs with an existing identity instead,
   for example a free Apple ID personal-team "Apple Development" certificate.
-- If the refreshed helper cannot read the saved credential, for example
-  because the item is partitioned by `cdhash`, setup asks for the password
-  again instead of failing.
+- The credential ACL survives a rebuild (it matches the designated
+  requirement), but the login keychain also partitions the item by the
+  creating binary's `cdhash`, so a re-signed helper cannot read it. Before
+  restarting the helper, setup runs the new stable copy's hidden
+  `credential-handoff` command, stopped after about 30 seconds. It asks the running
+  helper over the LaunchAgent's XPC Mach service
+  `io.github.yoonpooh.sparekey.handoff`. Both connection ends set a
+  code-signing requirement of the identifier plus the leaf certificate hash,
+  which the helper captures at startup after verifying its running code, so
+  macOS checks each peer rather than a pid looked up later. The helper answers
+  only while the Mac is unlocked. The new copy saves the password only if
+  OpenDirectory verifies it, deleting and re-adding the item under its own
+  partition. This grants nothing beyond what the ACL already trusts: code
+  signed by the pinned key. If the add fails after the delete, the restarted
+  helper reports the credential unreadable and setup prompts as below.
+- If the handoff is unavailable (first install, a helper older than 0.1.2, or
+  `--reset-password`), setup asks for the password again instead of failing.
 - If Accessibility is missing after a refresh, setup offers to open the
   Accessibility pane, reveal the stable copy, and recheck after a helper
   restart; `doctor` prints the fix under the failing row.
