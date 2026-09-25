@@ -15,7 +15,9 @@
   <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
 </p>
 
-[English](README.md) · 한국어 · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
+<p align="center">
+  <a href="README.md">English</a> · 한국어 · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
+</p>
 
 ---
 
@@ -28,7 +30,19 @@ sparekey lock     # restore the lock when it is done
 
 함께 제공되는 에이전트 스킬을 사용하면 이런 과정을 일일이 지시할 필요가 없습니다. 잠긴 Mac에서 일반적인 GUI 작업을 요청하면 에이전트가 잠금 상태를 확인하고, 잠금을 풀어 작업한 다음, 스스로 화면을 다시 잠급니다.
 
-> **상태:** 초기 단계(0.1). Apple silicon의 macOS 27.2에서 에이전트가 별도 지시 없이 잠금을 풀고 작업한 뒤 다시 잠그는 과정이 두 차례 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아닌 잠금 화면의 Accessibility 레이아웃에 의존합니다.
+## 0.2.0의 새로운 기능
+
+Codex의 Locked Computer Use에서 영감을 받아, 에이전트가 작업하는 동안 실제 디스플레이를 가리는 기능을 추가했습니다. 검은 가림막에는 Sparekey 로고와 “Your agent is using this Mac” 문구, **Lock Mac** 버튼이 표시되어 주변 사람이 작업 내용을 볼 수 없습니다.
+
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Mac 디스플레이에 표시된 Sparekey 화면 가림막" width="720">
+</p>
+
+- 암호를 제출하기 **전에** 잠금 화면 아래에 가림막을 배치해 데스크톱이 잠깐 노출되는 일도 막습니다. 스크린샷과 화면 녹화에는 가림막이 잡히지 않아 에이전트는 실제 화면을 볼 수 있고, 클릭과 입력도 그대로 전달됩니다. **Lock Mac**을 한 번 클릭하면 Mac이 잠깁니다. `sparekey unlock --no-cover`로 가림막을 생략할 수 있으며, `sparekey lock` 또는 다른 방법으로 다시 잠그면 가림막이 제거됩니다. 가림막은 화면을 숨길 뿐 Mac을 잠그지는 않습니다.
+- 잠긴 화면이 깨어 있지만 계정 대신 배경화면과 시계만 표시되면, 디스플레이를 한 번 잠자기 상태로 전환했다가 깨워 계정을 다시 표시합니다. 확인되지 않은 화면에는 여전히 암호를 입력하지 않습니다.
+- `brew upgrade sparekey` 후에는 `sparekey setup`을 다시 실행하세요. 그 전까지 새 CLI는 `helper_version_mismatch`를 보고합니다.
+
+> **상태:** 초기 단계(0.2.0). Apple silicon의 macOS 27.2에서 에이전트가 별도 지시 없이 잠금을 풀고 작업한 뒤 다시 잠그는 과정이 두 차례 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아닌 잠금 화면의 Accessibility 레이아웃에 의존합니다.
 
 ## 할 수 없는 일
 
@@ -48,7 +62,6 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 - `setup`은 바이너리를 고정된 위치에 복사하고, 로컬 코드 서명 ID로 서명한 뒤, 사용자별 백그라운드 helper로 실행합니다.
 - 암호는 로그인 Keychain에 저장됩니다. 서명된 해당 helper만 암호를 읽을 수 있습니다.
 - helper는 확인된 암호 입력란 하나에만 암호를 입력하고 **최대 한 번만** 제출합니다. 다른 계정, 대화상자, 복구 화면, 레이아웃 변경 등 예상 밖의 상황에서는 안전하게 중단합니다.
-- 암호를 제출하기 전에 잠금 화면 아래에 검은 가림막을 배치합니다. 잠금 해제 후에는 실제 디스플레이를 가리지만 스크린샷에는 나타나지 않습니다. 에이전트의 클릭과 입력은 가림막을 통과합니다. 가림막의 Lock Mac 버튼을 한 번 클릭하면 화면이 잠깁니다. 가림막을 건너뛰려면 `sparekey unlock --no-cover`를 사용하세요.
 - 지속적으로 적용되는 30초 제한과 차단 장치가 오래된 암호로 로그인 실패가 누적되는 것을 막습니다.
 
 ## 요구 사항

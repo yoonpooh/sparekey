@@ -15,7 +15,9 @@
   <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
 </p>
 
-[English](README.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · Español
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a> · Español
+</p>
 
 ---
 
@@ -28,7 +30,19 @@ sparekey lock     # restore the lock when it is done
 
 Con la skill de agente incluida, no tienes que indicar estos pasos. Pídele una tarea de GUI normal en un Mac bloqueado y el agente comprobará el estado, lo desbloqueará, hará el trabajo y volverá a bloquear la pantalla por sí mismo.
 
-> **Estado:** fase temprana (0.1). Funciona en macOS 27.2 con Apple silicon: en dos ejecuciones sin instrucciones adicionales, el agente desbloqueó el Mac, trabajó y volvió a bloquearlo. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility en la pantalla de bloqueo, no de una API pública de desbloqueo.
+## Novedades de la versión 0.2.0
+
+Inspirado en Locked Computer Use de Codex, Sparekey ahora cubre las pantallas físicas mientras trabaja un agente. La cubierta negra muestra el logotipo de Sparekey, el mensaje «Your agent is using this Mac» y un botón **Lock Mac**, para que nadie cercano pueda ver el trabajo del agente.
+
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Cubierta de pantalla de Sparekey en un Mac" width="720">
+</p>
+
+- La cubierta se coloca debajo de la pantalla de bloqueo **antes** de enviar la contraseña, así que el escritorio nunca queda visible ni por un instante. No aparece en las capturas ni en las grabaciones de pantalla; el agente sigue viendo la pantalla real y sus clics y pulsaciones pasan a través de ella. Un clic en **Lock Mac** bloquea el Mac. Usa `sparekey unlock --no-cover` para omitirla; `sparekey lock` o cualquier otro bloqueo la retira. La cubierta oculta la pantalla, pero no bloquea el Mac.
+- Si la pantalla bloqueada permanece encendida y muestra el fondo y el reloj en lugar de la cuenta, Sparekey hace que la pantalla entre en reposo y se reactive una vez para recuperar la cuenta. Sigue sin escribir nunca en una pantalla que no haya verificado.
+- Después de `brew upgrade sparekey`, vuelve a ejecutar `sparekey setup`. Hasta entonces, la nueva CLI informa de `helper_version_mismatch`.
+
+> **Estado:** fase temprana (0.2.0). Funciona en macOS 27.2 con Apple silicon: en dos ejecuciones sin instrucciones adicionales, el agente desbloqueó el Mac, trabajó y volvió a bloquearlo. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility en la pantalla de bloqueo, no de una API pública de desbloqueo.
 
 ## Lo que no hace
 
@@ -48,7 +62,6 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 - `setup` copia el binario a una ubicación fija, lo firma con una identidad local de firma de código y lo ejecuta como helper en segundo plano para tu usuario.
 - La contraseña se guarda en tu Keychain de inicio de sesión. Solo ese helper firmado puede leerla.
 - El helper rellena únicamente un campo de contraseña verificado, envía la contraseña **como máximo una vez** y se detiene de forma segura ante cualquier imprevisto: otras cuentas, cuadros de diálogo, pantallas de recuperación o cambios en la interfaz.
-- Antes de enviar la contraseña, coloca una cubierta negra debajo de la pantalla de bloqueo. Después del desbloqueo, oculta las pantallas físicas, pero no aparece en las capturas. Los clics y las pulsaciones del agente la atraviesan. Su botón Lock Mac bloquea la pantalla con un clic. Usa `sparekey unlock --no-cover` para omitirla.
 - Un límite persistente de 30 segundos y un interruptor de seguridad evitan que una contraseña antigua acumule intentos fallidos de inicio de sesión.
 
 ## Requisitos

@@ -15,7 +15,9 @@
   <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
 </p>
 
-[English](README.md) · [한국어](README.ko.md) · [日本語](README.ja.md) · 简体中文 · [Español](README.es.md)
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · 简体中文 · <a href="README.es.md">Español</a>
+</p>
 
 ---
 
@@ -28,7 +30,19 @@ sparekey lock     # restore the lock when it is done
 
 借助随附的代理技能，您无需专门交代这些步骤。只需让代理在锁定的 Mac 上完成普通 GUI 任务，它就会自行检查锁定状态、解锁、工作，并在结束后重新锁屏。
 
-> **状态：**早期阶段（0.1）。在搭载 Apple silicon 的 macOS 27.2 上，两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。本工具依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
+## 0.2.0 新增功能
+
+受 Codex 的 Locked Computer Use 启发，Sparekey 现在会在代理工作时遮住实体显示器。黑色遮罩显示 Sparekey 标志、“Your agent is using this Mac”字样和 **Lock Mac** 按钮，让附近的人看不到代理的操作。
+
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Mac 显示器上的 Sparekey 屏幕遮罩" width="720">
+</p>
+
+- 在提交密码**之前**，遮罩就已放在锁屏界面下方，因此桌面不会短暂露出。屏幕截图和录屏不会捕获遮罩，代理仍能看到真实屏幕，点击和键盘输入也能正常传递。点击一次 **Lock Mac** 即可锁定 Mac。使用 `sparekey unlock --no-cover` 可跳过遮罩；运行 `sparekey lock` 或以其他方式重新锁定时，遮罩会被移除。遮罩只隐藏屏幕，并不会锁定 Mac。
+- 如果锁屏界面处于唤醒状态，却只显示壁纸和时钟而不显示账户，Sparekey 会让显示器休眠再唤醒一次，以重新显示账户。它仍不会在未经验证的界面上输入密码。
+- 运行 `brew upgrade sparekey` 后，请再次运行 `sparekey setup`。在此之前，新版 CLI 会报告 `helper_version_mismatch`。
+
+> **状态：**早期阶段（0.2.0）。在搭载 Apple silicon 的 macOS 27.2 上，两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。本工具依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
 
 ## 不适用的场景
 
@@ -48,7 +62,6 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 - `setup` 将二进制文件复制到固定位置，使用本地代码签名身份为其签名，并将其作为当前用户的后台 helper 运行。
 - 密码存储在登录 Keychain 中，只有已签名的该 helper 能读取。
 - helper 只会在经过验证的单个密码输入框中填写密码，且**最多提交一次**。遇到其他账户、对话框、恢复界面或布局变化等异常情况时会安全停止。
-- 提交密码前，会在锁屏界面下方放置黑色遮罩。解锁后，遮罩会遮住实体显示器，但不会出现在屏幕截图中。代理的点击和输入可以穿过遮罩。点击遮罩上的 Lock Mac 按钮即可锁屏。使用 `sparekey unlock --no-cover` 可跳过遮罩。
 - 持续生效的 30 秒频率限制和熔断机制可避免旧密码导致登录失败次数不断累积。
 
 ## 系统要求

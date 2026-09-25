@@ -15,7 +15,9 @@
   <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
 </p>
 
-[English](README.md) · [한국어](README.ko.md) · 日本語 · [简体中文](README.zh-CN.md) · [Español](README.es.md)
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · 日本語 · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
+</p>
 
 ---
 
@@ -28,7 +30,19 @@ sparekey lock     # restore the lock when it is done
 
 付属のエージェントスキルを使えば、この手順を逐一指示する必要はありません。ロック中の Mac で通常の GUI 作業を頼むと、エージェントがロック状態を確認し、解除して作業を進め、最後に自分で画面を再ロックします。
 
-> **状況:** 初期段階（0.1）。Apple silicon 搭載の macOS 27.2 では、明示的な指示なしにエージェントがロック解除、作業、再ロックまで行う動作を 2 回確認しました。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存します。
+## 0.2.0 の新機能
+
+Codex の Locked Computer Use に着想を得て、エージェントの作業中に物理ディスプレイを覆う機能を追加しました。黒いカバーには Sparekey のロゴ、「Your agent is using this Mac」というメッセージ、**Lock Mac** ボタンが表示され、周囲の人から作業内容を隠します。
+
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Mac のディスプレイに表示された Sparekey の画面カバー" width="720">
+</p>
+
+- パスワードを送信する**前に**ロック画面の下へカバーを配置するため、デスクトップが一瞬見えることもありません。スクリーンショットや画面収録には映らず、エージェントは実際の画面を見ながら操作でき、クリックやキー入力もそのまま届きます。**Lock Mac** を 1 回クリックすると Mac をロックできます。`sparekey unlock --no-cover` でカバーを省略でき、`sparekey lock` またはその他の再ロック時にカバーは取り除かれます。カバーは画面を隠しますが、Mac 自体をロックするものではありません。
+- ロック中の画面が点灯していてもアカウントが表示されず、壁紙と時計だけが見える場合、ディスプレイを一度スリープさせてから起こし、アカウントを再表示します。確認できていない画面にパスワードを入力することはありません。
+- `brew upgrade sparekey` の後は `sparekey setup` を再実行してください。それまでは新しい CLI が `helper_version_mismatch` を報告します。
+
+> **状況:** 初期段階（0.2.0）。Apple silicon 搭載の macOS 27.2 では、明示的な指示なしにエージェントがロック解除、作業、再ロックまで行う動作を 2 回確認しました。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存します。
 
 ## 対象外の用途
 
@@ -48,7 +62,6 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 - `setup` はバイナリを固定の場所にコピーし、ローカルのコード署名 ID で署名して、ユーザーごとのバックグラウンド helper として起動します。
 - パスワードはログイン Keychain に保存されます。読み取れるのは、その署名済み helper だけです。
 - helper は検証済みのパスワード欄一つだけに入力し、送信は**最大 1 回**です。別のアカウント、ダイアログ、復旧画面、レイアウト変更など、想定外の状態では安全側に停止します。
-- パスワード送信前に、ロック画面の下へ黒いカバーを配置します。解除後は物理ディスプレイを覆いますが、スクリーンショットには映りません。エージェントのクリックや入力はカバーを通過します。カバーの Lock Mac ボタンを 1 回押すと画面をロックできます。省略するには `sparekey unlock --no-cover` を使います。
 - 状態が保持される 30 秒の試行制限と遮断機構により、古いパスワードでログイン失敗が積み重なるのを防ぎます。
 
 ## 動作要件

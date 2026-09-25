@@ -15,7 +15,9 @@
   <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
 </p>
 
-English · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
+<p align="center">
+  English · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
+</p>
 
 ---
 
@@ -28,7 +30,19 @@ sparekey lock     # restore the lock when it is done
 
 With the bundled agent skill, you don't have to mention any of this. Ask your agent for an ordinary GUI task on a locked Mac, and it checks the lock, unlocks, does the work, and locks the screen again on its own.
 
-> **Status:** early (0.1). It works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
+## What's new in 0.2.0
+
+Inspired by Codex's Locked Computer Use, Sparekey now covers the physical displays while an agent works. The black cover shows the Sparekey logo, “Your agent is using this Mac,” and a **Lock Mac** button, so people nearby cannot see the agent's work.
+
+<p align="center">
+  <img src="docs/assets/cover.png" alt="Sparekey screen cover on a Mac display" width="720">
+</p>
+
+- The cover appears beneath the lock screen **before** password submission, so the desktop never flashes. Screenshots and screen recordings exclude it, while the agent still sees the real screen and its clicks and typing pass through. One click on **Lock Mac** locks the Mac. Use `sparekey unlock --no-cover` to skip the cover; `sparekey lock` or any relock removes it. The cover hides the screen but does not lock it.
+- If an awake locked screen shows only the wallpaper and clock instead of the account, Sparekey performs one display sleep→wake cycle to bring the account back. It still never types into an unverified screen.
+- After `brew upgrade sparekey`, run `sparekey setup` again. Until then, the new CLI reports `helper_version_mismatch`.
+
+> **Status:** early (0.2.0). It works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
 
 ## What it is not
 
@@ -48,7 +62,6 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 - `setup` copies the binary to a fixed location, signs it with a local code-signing identity, and runs it as a per-user background helper.
 - The password lives in your login Keychain. Only that signed helper is allowed to read it.
 - The helper fills only a verified password field, submits **at most once**, and fails closed on anything unexpected: other accounts, dialogs, recovery screens, or layout changes.
-- Before password submission, a black cover is placed beneath the lock screen and hides the physical displays after unlock while remaining invisible to screenshots. Agent clicks and typing pass through it. Its Lock Mac button locks the screen with one click. Use `sparekey unlock --no-cover` to skip it.
 - A persistent 30-second limiter and a circuit breaker stop a stale password from piling up failed logins.
 
 ## Requirements
