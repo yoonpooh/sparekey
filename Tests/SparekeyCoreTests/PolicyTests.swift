@@ -67,14 +67,27 @@ final class PolicyTests: XCTestCase {
         var ownership = CoverOwnership()
         XCTAssertTrue(ownership.begin(attempt: 1))
         XCTAssertEqual(ownership.bind(attempt: 1, token: 1), .bound)
+        XCTAssertTrue(ownership.owns(token: 1))
         // External relock, then a new unlock before the old watcher notices.
         XCTAssertTrue(ownership.begin(attempt: 2))
         XCTAssertFalse(ownership.end(token: 1))
+        XCTAssertFalse(ownership.owns(token: 1))
         XCTAssertEqual(ownership.bind(attempt: 2, token: 2), .bound)
         XCTAssertTrue(ownership.end(token: 2))
         XCTAssertTrue(ownership.begin(attempt: 3))
         XCTAssertTrue(ownership.cancel(attempt: 3))
         XCTAssertFalse(ownership.begin(attempt: 3))
+    }
+    func testWatcherCanBindCoverBeforeRecoveryWakeButNotStealPendingAttempt() {
+        var ownership = CoverOwnership()
+        XCTAssertTrue(ownership.adopt(token: 1))
+        XCTAssertTrue(ownership.owns(token: 1))
+        XCTAssertTrue(ownership.end(token: 1))
+        XCTAssertFalse(ownership.adopt(token: 1))
+        XCTAssertTrue(ownership.begin(attempt: 2))
+        XCTAssertFalse(ownership.adopt(token: 2))
+        XCTAssertEqual(ownership.bind(attempt: 2, token: 2), .bound)
+        XCTAssertTrue(ownership.adopt(token: 2))
     }
     func testDisplayRevealRecoveryDecision() {
         XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 1.49, state: .waitingForAccount,
@@ -161,6 +174,25 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(persisted.count, 2)
         XCTAssertTrue(persisted.last!.breakerTripped)
         XCTAssertThrowsError(try state.admit(now: 200))
+    }
+    func testSubmissionCallbackIsPerAttemptAndPreSubmissionFailuresDoNotTripBreaker() throws {
+        var first = SafetyState()
+        var submitted = false
+        try UnlockAttempt.run(state: &first, now: 100, persist: { _ in },
+                              submit: { submitted = true }, wasSubmitted: { submitted })
+        XCTAssertTrue(submitted)
+        var second = first
+        submitted = false // A new request starts with a fresh submission state.
+        XCTAssertThrowsError(try UnlockAttempt.run(state: &second, now: 131, persist: { _ in },
+                                                   submit: { throw SparekeyError("cover unavailable", code: "cover_unavailable") },
+                                                   wasSubmitted: { submitted }))
+        XCTAssertFalse(submitted)
+        XCTAssertFalse(second.breakerTripped)
+        submitted = false
+        XCTAssertThrowsError(try UnlockAttempt.run(state: &second, now: 162, persist: { _ in },
+                                                   submit: { throw SparekeyError("hold unavailable", code: "display_hold_unavailable") },
+                                                   wasSubmitted: { submitted }))
+        XCTAssertFalse(second.breakerTripped)
     }
     func testUninstallAllowlistAndSignatureRequirement() throws {
         XCTAssertTrue(InstallInventory.allows(["state.json", "run"], expected: ["state.json", "run", "bin"]))

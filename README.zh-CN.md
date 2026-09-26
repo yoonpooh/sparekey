@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.2.0</strong>，代理工作时会遮住屏幕。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.2.1</strong>，解锁后 macOS 立即关闭屏幕时会重新唤醒。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey 不是密码绕过工具、恢复工具，也不是远程访问服务。它无法在启动时解锁 FileVault，也无法解锁已退出登录的会话、其他用户的账户，或无法连接到的睡眠中的 Mac。
 
 > [!WARNING]
-> **状态：早期阶段（0.2.0）。** 在搭载 Apple silicon 的 macOS 27.2 上可以正常工作：两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。它依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
+> **状态：早期阶段（0.2.1）。** 在搭载 Apple silicon 的 macOS 27.2 上可以正常工作：两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。它依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
 
 ## 快速开始
 

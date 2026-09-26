@@ -5,7 +5,7 @@ final class OutputTests: XCTestCase {
     private func ready() -> DoctorFacts {
         var facts = DoctorFacts()
         facts.installed = true; facts.signed = true; facts.agentLoaded = true
-        facts.helper = .running("0.2.0"); facts.accessibility = true; facts.credentialReadable = true
+        facts.helper = .running("0.2.1"); facts.accessibility = true; facts.credentialReadable = true
         facts.breakerTripped = false; facts.codexSkill = .current
         facts.stablePath = "/Users/me/Library/Application Support/sparekey/bin/sparekey"; facts.uid = 501
         return facts

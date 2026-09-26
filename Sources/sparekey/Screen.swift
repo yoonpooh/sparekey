@@ -7,7 +7,36 @@ import SparekeyCore
 import Darwin
 
 enum Screen {
-    static var submitted = false
+    static func displayAsleep() -> Bool { CGDisplayIsAsleep(CGMainDisplayID()) != 0 }
+
+    static func wakeDisplay() -> IOPMAssertionID? {
+        var activity: IOPMAssertionID = 0
+        guard IOPMAssertionDeclareUserActivity("sparekey display recovery" as CFString,
+                                               kIOPMUserActiveRemote, &activity) == kIOReturnSuccess else { return nil }
+        return activity
+    }
+
+    static func confirmDisplayReady() throws {
+        var locked = try locked()
+        var asleep = displayAsleep()
+        if DisplayContinuityPolicy.needsPostUnlockWake(locked: locked, displayAsleep: asleep) {
+            guard let activity = wakeDisplay() else {
+                throw SparekeyError("Could not wake the display after unlock.", code: "unlock_not_confirmed")
+            }
+            defer { IOPMAssertionRelease(activity) }
+            let deadline = ProcessInfo.processInfo.systemUptime + 1.5
+            repeat {
+                Thread.sleep(forTimeInterval: 0.1)
+                locked = try self.locked()
+                asleep = displayAsleep()
+                if DisplayContinuityPolicy.isReady(locked: locked, displayAsleep: asleep) { return }
+            } while ProcessInfo.processInfo.systemUptime < deadline
+        }
+        guard DisplayContinuityPolicy.isReady(locked: locked, displayAsleep: asleep) else {
+            throw SparekeyError("Unlock was not confirmed with the display awake. No retry was submitted.",
+                                code: "unlock_not_confirmed")
+        }
+    }
     struct Snapshot {
         let pid: pid_t
         let started: UInt64
@@ -30,7 +59,7 @@ enum Screen {
     }
 
     static func lock() throws {
-        if try locked() { return }
+        let initiallyLocked = try locked()
         guard AXIsProcessTrusted() else {
             throw SparekeyError("Accessibility permission is missing. Enable the stable Sparekey copy in System Settings.", code: "accessibility_missing")
         }
@@ -42,26 +71,30 @@ enum Screen {
         }
         down.flags = [.maskControl, .maskCommand]
         up.flags = [.maskControl, .maskCommand]
-        down.post(tap: .cghidEventTap)
-        up.post(tap: .cghidEventTap)
-        let deadline = ProcessInfo.processInfo.systemUptime + 5
-        repeat {
-            if try locked() { return }
-            Thread.sleep(forTimeInterval: 0.1)
-        } while ProcessInfo.processInfo.systemUptime < deadline
-        if let framework = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_NOW) {
-            defer { dlclose(framework) }
-            if let symbol = dlsym(framework, "SACLockScreenImmediate") {
-                typealias LockFunction = @convention(c) () -> Void
-                unsafeBitCast(symbol, to: LockFunction.self)()
-                let fallbackDeadline = ProcessInfo.processInfo.systemUptime + 5
-                repeat {
-                    if try locked() { return }
-                    Thread.sleep(forTimeInterval: 0.1)
-                } while ProcessInfo.processInfo.systemUptime < fallbackDeadline
-            }
+        func waitForLock() throws -> Bool {
+            let deadline = ProcessInfo.processInfo.systemUptime + 5
+            repeat {
+                if try locked() { return true }
+                Thread.sleep(forTimeInterval: 0.1)
+            } while ProcessInfo.processInfo.systemUptime < deadline
+            return false
         }
-        throw SparekeyError("Lock was not confirmed.", code: "lock_not_confirmed")
+        try LockCommandPolicy.run(initiallyLocked: initiallyLocked, sendShortcut: {
+            down.post(tap: .cghidEventTap)
+            up.post(tap: .cghidEventTap)
+        }, confirm: {
+            try waitForLock()
+        }, immediate: {
+            guard let framework = dlopen("/System/Library/PrivateFrameworks/login.framework/Versions/Current/login", RTLD_NOW) else {
+                throw SparekeyError("Immediate lock function is unavailable.", code: "lock_not_confirmed")
+            }
+            defer { dlclose(framework) }
+            guard let symbol = dlsym(framework, "SACLockScreenImmediate") else {
+                throw SparekeyError("Immediate lock function is unavailable.", code: "lock_not_confirmed")
+            }
+            typealias LockFunction = @convention(c) () -> Void
+            unsafeBitCast(symbol, to: LockFunction.self)()
+        })
     }
 
     static func value(_ element: AXUIElement, _ name: String) throws -> CFTypeRef? {
@@ -76,7 +109,7 @@ enum Screen {
         guard AXIsProcessTrusted() else {
             throw SparekeyError("Accessibility permission is missing. Add the stable Sparekey copy in System Settings > Privacy & Security > Accessibility.", code: "accessibility_missing")
         }
-        guard try locked() else { throw SparekeyError("The screen is already unlocked.") }
+        guard try locked() else { throw SparekeyError("The screen is already unlocked.", code: "already_unlocked") }
         let apps = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == "com.apple.loginwindow"
                 && $0.executableURL?.path == "/System/Library/CoreServices/loginwindow.app/Contents/MacOS/loginwindow"
@@ -327,8 +360,7 @@ enum Screen {
         return next
     }
 
-    static func unlock(beforeFill: () throws -> Void = {}) throws {
-        submitted = false
+    static func unlock(onSubmit: () -> Void = {}, beforeFill: () throws -> Void = {}) throws {
         let target = try prepare()
         let field = try LoginPolicy.field(in: target.nodes)
         _ = try validate(target, field: field)
@@ -364,7 +396,7 @@ enum Screen {
         guard CFEqual(candidate.elements[button], final.elements[finalButton]) else {
             throw SparekeyError("The login button changed.", code: "login_window_unsupported")
         }
-        submitted = true
+        onSubmit()
         let result = AXUIElementPerformAction(final.elements[finalButton], kAXPressAction as CFString)
         guard result == .success || result == .cannotComplete else { throw SparekeyError("Login submission failed.") }
         let unlockDeadline = ProcessInfo.processInfo.systemUptime + 7

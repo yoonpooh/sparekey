@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
         return result
     for args in [[], ['help'], ['--help'], ['-h'], ['help', 'setup'], ['lock', '--help']]:
         assert 'Usage:' in run(args).stdout
-    assert run(['version']).stdout == 'sparekey 0.2.0\n'
+    assert run(['version']).stdout == 'sparekey 0.2.1\n'
     assert run(['--version']).stdout == run(['version']).stdout
     bad = json.loads(run(['unlock', '--json', '--skill', 'codex'], 2).stdout)
     assert bad['error']['code'] == 'usage'
