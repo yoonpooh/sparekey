@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.2.0</strong>. 에이전트가 작업하는 동안 화면을 가립니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.2.1</strong>. 잠금 해제 직후 macOS가 화면을 꺼도 다시 깨워 작업을 이어갑니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey는 암호 우회 도구도, 복구 도구도, 원격 접속 서비스도 아닙니다. 시동 시 FileVault 잠금, 로그아웃된 세션, 다른 사용자 계정, 접근할 수 없는 잠자기 상태의 Mac은 잠금 해제할 수 없습니다.
 
 > [!WARNING]
-> **상태: 초기 단계(0.2.0).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
+> **상태: 초기 단계(0.2.1).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
 
 ## 빠른 시작
 

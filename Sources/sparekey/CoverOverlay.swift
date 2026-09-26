@@ -26,7 +26,7 @@ final class CoverOverlay {
         DispatchQueue.main.async {
             guard shared.ownership.begin(attempt: attempt) else { completion(false); return }
             shared.show()
-            completion(!shared.panels.isEmpty)
+            completion(shared.fullyCovered)
         }
     }
     static func scheduleBind(attempt: UInt64, token: UInt64) {
@@ -53,6 +53,25 @@ final class CoverOverlay {
         DispatchQueue.main.async {
             shared.ownership.clear()
             shared.hide()
+        }
+    }
+
+    private var fullyCovered: Bool {
+        visible && !panels.isEmpty && panels.count == NSScreen.screens.count
+            && panels.allSatisfy(\.isVisible) && buttonPanel?.isVisible == true
+    }
+
+    static func isCovered(token: UInt64) -> Bool {
+        DispatchQueue.main.sync {
+            shared.ownership.owns(token: token) && shared.fullyCovered
+        }
+    }
+
+    static func ensureCovered(token: UInt64) -> Bool {
+        DispatchQueue.main.sync {
+            guard shared.ownership.adopt(token: token) else { return false }
+            if !shared.fullyCovered { shared.show() }
+            return shared.fullyCovered
         }
     }
 

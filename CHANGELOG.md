@@ -3,6 +3,10 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] - 2026-09-26
+
+- Place the cover and acquire the display wake hold before any `probe` or covered `unlock` wake, retain both when a grace-period wake unlocks the session, and create a cover before retrying an unexpected display wake. Reset submission tracking per attempt and force an immediate lock action even when display-sleep grace has set the lock flag.
+
 ## [0.2.0] - 2026-09-25
 
 - Recover once from an awake login screen that has no account label or password field by cycling display sleep and remote wake before giving up.

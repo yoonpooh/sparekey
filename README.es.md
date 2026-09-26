@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.2.0</strong>, que cubre la pantalla mientras trabaja el agente. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.2.1</strong>, que vuelve a encender la pantalla si macOS la apaga justo después de desbloquear. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ Con la skill de agente incluida, no tienes que explicarle nada de esto. Pídele 
 Sparekey no sirve para eludir contraseñas, recuperar cuentas ni ofrecer acceso remoto. No puede desbloquear FileVault durante el arranque, una sesión cerrada, la cuenta de otro usuario ni un Mac en reposo al que no se pueda acceder.
 
 > [!WARNING]
-> **Estado: fase temprana (0.2.0).** Funciona en macOS 27.2 con Apple silicon, donde dos ejecuciones del agente sin instrucciones adicionales desbloquearon el Mac, trabajaron y lo volvieron a bloquear correctamente. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility de la pantalla de bloqueo, no de una API pública de desbloqueo.
+> **Estado: fase temprana (0.2.1).** Funciona en macOS 27.2 con Apple silicon, donde dos ejecuciones del agente sin instrucciones adicionales desbloquearon el Mac, trabajaron y lo volvieron a bloquear correctamente. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility de la pantalla de bloqueo, no de una API pública de desbloqueo.
 
 ## Inicio rápido
 

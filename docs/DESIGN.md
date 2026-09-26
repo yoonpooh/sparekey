@@ -131,7 +131,7 @@ Newline-delimited JSON over the Unix socket, one request per connection:
 
 ```json
 {"v":1,"command":"status"}
-{"v":1,"ok":true,"state":"locked","message":"locked","helperVersion":"0.2.0"}
+{"v":1,"ok":true,"state":"locked","message":"locked","helperVersion":"0.2.1"}
 ```
 
 Both sides check the peer UID. The client reports `helper_version_mismatch`
