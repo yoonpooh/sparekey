@@ -3,6 +3,11 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-09-27
+
+- Install a Codex plugin with the existing logo through `setup --skill codex` and `skill install --agent codex`. Verify activation before backing up and removing the old standalone skill; preserve Claude Code's skill installer.
+- Report Codex plugin status in `doctor`, remove installed plugins through Codex CLI during uninstall, and embed plugin assets with a content-based cache version.
+
 ## [0.2.1] - 2026-09-26
 
 - Place the cover and acquire the display wake hold before any `probe` or covered `unlock` wake, retain both when a grace-period wake unlocks the session, and create a cover before retrying an unexpected display wake. Reset submission tracking per attempt and force an immediate lock action even when display-sleep grace has set the lock flag.

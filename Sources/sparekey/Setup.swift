@@ -221,7 +221,7 @@ enum Setup {
     }
     static func run(_ invocation: Invocation) throws {
         try localTTY()
-        Console.line(Console.palette.bold("Sparekey 0.2.1 setup"))
+        Console.line(Console.palette.bold("Sparekey 0.3.0 setup"))
         Console.line()
         try steps(invocation)
     }
@@ -319,11 +319,11 @@ enum Setup {
             else if let chosen = invocation.skillTargets { targets = chosen }
             else { targets = try Skills.prompt() }
         } catch {
-            Console.row(.warn, "Agent skills", "not chosen: " + ((error as? SparekeyError)?.description ?? error.localizedDescription))
+            Console.row(.warn, "Agent integration", "not chosen: " + ((error as? SparekeyError)?.description ?? error.localizedDescription))
             return 1
         }
         if targets.isEmpty {
-            Console.row(.info, "Agent skills", "none selected", notes: ["Add one later: sparekey skill install"])
+            Console.row(.info, "Agent integration", "none selected", notes: ["Add one later: sparekey skill install"])
             return 0
         }
         var warnings = 0

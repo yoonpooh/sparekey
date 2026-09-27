@@ -4,7 +4,7 @@ import SparekeyCore
 import AppKit
 
 let help = """
-sparekey 0.2.1 — unlock and relock this user's logged-in Mac
+sparekey 0.3.0 — unlock and relock this user's logged-in Mac
 
 Usage:
   sparekey                  Show help
@@ -18,6 +18,9 @@ Usage:
   sparekey uninstall        Remove Sparekey installation
   sparekey help [command]   Show help
   sparekey version          Print version
+
+Agent integration: Codex installs a plugin (requires Codex CLI); Claude Code installs a skill.
+--force backs up and replaces a differing integration outside interactive setup.
 
 Exit 0 success, 1 operational failure, 2 usage error. The internal serve command is for launchd.
 """
@@ -42,7 +45,7 @@ if command == .help {
     else { print(help) }
     exit(0)
 }
-if command == .version { print("sparekey 0.2.1"); exit(0) }
+if command == .version { print("sparekey 0.3.0"); exit(0) }
 do {
     guard getuid() != 0, getuid() == geteuid() else { throw SparekeyError("Run as your regular user, without sudo.") }
     switch command {
@@ -96,7 +99,7 @@ do {
     case .skill:
         let targets = try invocation.agent.map { [$0] } ?? Skills.prompt()
         for target in targets { try Skills.installAndReport(target, force: invocation.force) }
-        if targets.isEmpty { Console.row(.info, "Agent skills", "none selected") }
+        if targets.isEmpty { Console.row(.info, "Agent integration", "none selected") }
     case .doctor: Doctor.run(json: invocation.json)
     case .unlock, .lock, .status, .probe:
         let reply = try Transport.request(command.rawValue, noCover: invocation.noCover)

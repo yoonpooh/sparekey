@@ -222,28 +222,47 @@ lock within the timeout, the helper resolves `SACLockScreenImmediate` from
 After `brew upgrade`, rerunning `setup` refreshes the copy without asking for
 the password again.
 
-## Agent skill
+## Agent integration
 
-The skill text ships inside the binary. Targets:
+`setup --skill codex` and `skill install --agent codex` install the bundled
+Codex plugin through `codex plugin add sparekey@<personal-marketplace-name>`.
+The plugin source lives at `~/plugins/sparekey`. The installer preserves the
+personal marketplace's name, metadata, order, and other entries. An existing
+Sparekey entry pointing at another source is rejected before writes.
+Codex CLI must be on PATH and support plugin commands. Child processes use
+null stdin, captured output, and a 30-second timeout. A plugin failure becomes
+a setup warning without undoing the helper setup.
 
-- Claude Code: `~/.claude/skills/sparekey/SKILL.md`, when `~/.claude` exists.
-- Codex: `~/.agents/skills/sparekey/SKILL.md`, when `~/.agents` or `~/.codex`
-  exists.
+The plugin manifest, skill, and existing PNG logo are embedded in the single
+binary. `scripts/embed-agent-assets.py` generates these sources from
+`packaging/codex/plugin.json`, `skills/sparekey/SKILL.md`, and
+`docs/assets/logo.png`. Run it after changing these assets; `--check` detects
+stale generated files. A content-derived version suffix invalidates Codex's
+plugin cache when payloads change.
 
-`setup` lists Claude Code and Codex, marks detected agents, and asks which
-skill targets to install. Enter selects none. `setup --skill codex`,
-`--skill claude`, or `--skill claude,codex` skips the prompt; `--skill` is
-repeatable. `--no-skill` also skips the prompt and conflicts with `--skill`.
-Undetected agents may be selected explicitly and their skill directory is
-created. `sparekey skill install` prompts the same way on a TTY; without a
-TTY it requires `--agent claude|codex`. An identical existing
-file is left alone. A different one is replaced only after an interactive
-yes, with the old file kept as `SKILL.md.bak`. `sparekey skill install
-[--agent claude|codex] [--force]` does the same outside setup, and
-`uninstall` removes only skill files whose content Sparekey wrote.
+Installation and activation at the expected version are verified before
+removing the old `~/.agents/skills/sparekey/SKILL.md`. The old skill directory
+is copied to `~/.sparekey-backups` first. Different skill/package content
+requires interactive confirmation or `skill install --agent codex --force`.
+Symlinks and foreign-owned managed paths are rejected. Failures preserve the
+old standalone skill; rerunning completes a partially installed plugin.
+Start a new Codex thread to load the installed plugin.
 
-The skill keeps the MVP's ownership rule: relock only if this task unlocked
-an initially locked Mac.
+Claude Code retains the standalone installer at
+`~/.claude/skills/sparekey/SKILL.md`, including its `SKILL.md.bak` behavior.
+Both setup and the standalone install command use the same target dispatcher.
+Enter selects no integration; `--no-skill` skips selection. Existing command
+flags remain compatible.
+
+`doctor` distinguishes current, outdated, disabled, legacy, duplicate, and
+unverifiable Codex installations; the `codex_skill` JSON key remains stable.
+`uninstall` removes the registered plugin through Codex CLI. If CLI removal
+fails, it warns and proceeds with helper removal. Plugin sources, marketplace
+entries, and backups are retained for recovery/reinstall. Claude and legacy
+standalone skill removal still only deletes content matching this binary.
+
+The skill retains the ownership rule: relock only if this task unlocked an
+initially locked Mac.
 
 ## Signing spike
 

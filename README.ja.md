@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新リリース: <strong>0.2.1</strong>（ロック解除直後に macOS が画面を消しても再び点灯）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
+  <sub>最新リリース: <strong>0.3.0</strong>（Codex プラグインのインストールと旧スキルからの移行）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey はパスワード回避ツールでも、復旧ツールでも、リモートアクセスサービスでもありません。起動時の FileVault、ログアウトしたセッション、別のユーザーのアカウント、アクセスできないスリープ中の Mac は解除できません。
 
 > [!WARNING]
-> **状況: 初期段階（0.2.1）。** Apple silicon 搭載の macOS 27.2 で動作し、特に指示を与えずに実行したエージェントが、ロック解除・作業・再ロックを 2 回とも成功させています。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存しています。
+> **状況: 初期段階（0.3.0）。** Apple silicon 搭載の macOS 27.2 で動作し、特に指示を与えずに実行したエージェントが、ロック解除・作業・再ロックを 2 回とも成功させています。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存しています。
 
 ## クイックスタート
 
@@ -153,7 +153,7 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 ## エージェントスキル
 
-setup では **Codex**（`~/.agents/skills/sparekey`）と **Claude Code**（`~/.claude/skills/sparekey`）向けのスキルをインストールできます。後からインストールすることもできます。
+setup は Codex CLI 経由で **Codex プラグイン**を、または `~/.claude/skills/sparekey` に **Claude Code スキル**をインストールします。既存の `--skill codex` オプションはプラグインを選択します。Codex CLI は `PATH` 上にあり、`codex plugin add` に対応している必要があります。インストール確認後に旧スキルをバックアップして削除します。変更済みの内容の置換には確認、または `--force` が必要です。完了後は新しい Codex スレッドを開始してください。後からインストールすることもできます。
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
