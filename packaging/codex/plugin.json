@@ -1,0 +1,40 @@
+{
+  "name": "sparekey",
+  "version": "0.3.0",
+  "description": "Unlock your logged-in Mac for authorized GUI tasks and restore the screen lock when the task is done.",
+  "author": {
+    "name": "yoonpooh",
+    "url": "https://github.com/yoonpooh"
+  },
+  "homepage": "https://github.com/yoonpooh/sparekey",
+  "repository": "https://github.com/yoonpooh/sparekey",
+  "license": "MIT",
+  "keywords": [
+    "macos",
+    "computer-use",
+    "screen-lock",
+    "sparekey"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Sparekey",
+    "shortDescription": "A spare key to your Mac, for your AI agent.",
+    "longDescription": "Checks the screen lock before GUI tasks, unlocks your own logged-in session with the local Sparekey helper, and restores the lock when finished. Requires Sparekey and one-time setup in your local terminal. Credentials stay in the macOS Keychain.",
+    "developerName": "yoonpooh",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/yoonpooh/sparekey",
+    "brandColor": "#FFC928",
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo.png",
+    "defaultPrompt": [
+      "Check whether this Mac is locked.",
+      "Check whether Sparekey is ready for GUI tasks.",
+      "Use Sparekey when my GUI task needs this Mac unlocked."
+    ]
+  }
+}

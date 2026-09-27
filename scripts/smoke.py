@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
         return result
     for args in [[], ['help'], ['--help'], ['-h'], ['help', 'setup'], ['lock', '--help']]:
         assert 'Usage:' in run(args).stdout
-    assert run(['version']).stdout == 'sparekey 0.2.1\n'
+    assert run(['version']).stdout == 'sparekey 0.3.0\n'
     assert run(['--version']).stdout == run(['version']).stdout
     bad = json.loads(run(['unlock', '--json', '--skill', 'codex'], 2).stdout)
     assert bad['error']['code'] == 'usage'
@@ -26,18 +26,19 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
     missing = json.loads(run(['status', '--json'], 1).stdout)
     assert missing['error']['code'] == 'not_set_up'
     assert not (Path(temp) / 'runtime').exists()
-    skill = Path(temp) / 'home/.agents/skills/sparekey/SKILL.md'
-    run(['skill', 'install', '--agent', 'codex'])
+    # Claude retains the standalone installer. Codex is exercised in test_codex_plugin.py.
+    skill = Path(temp) / 'home/.claude/skills/sparekey/SKILL.md'
+    run(['skill', 'install', '--agent', 'claude'])
     assert skill.exists() and 'sparekey unlock --json' in skill.read_text()
-    run(['skill', 'install', '--agent', 'codex'])
+    run(['skill', 'install', '--agent', 'claude'])
     skill.write_text('custom skill\n')
-    run(['skill', 'install', '--agent', 'codex', '--force'])
+    run(['skill', 'install', '--agent', 'claude', '--force'])
     assert skill.with_name('SKILL.md.bak').read_text() == 'custom skill\n'
     assert 'sparekey unlock --json' in skill.read_text()
     skill.write_text('changed again\n')
-    assert 'Backup already exists' in run(['skill', 'install', '--agent', 'codex', '--force'], 1).stderr
+    assert 'Backup already exists' in run(['skill', 'install', '--agent', 'claude', '--force'], 1).stderr
     assert skill.read_text() == 'changed again\n'
-    claude = Path(temp) / 'home/.claude'
-    claude.symlink_to(Path(temp) / 'home/.agents')
+    skill.unlink()
+    skill.symlink_to(skill.with_name('SKILL.md.bak').resolve())
     assert 'symlink' in run(['skill', 'install', '--agent', 'claude'], 1).stderr
     print('Safe CLI, JSON usage errors, no-TTY skill choice, missing helper, and temp skill install checks passed.')

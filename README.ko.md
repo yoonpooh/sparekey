@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.2.1</strong>. 잠금 해제 직후 macOS가 화면을 꺼도 다시 깨워 작업을 이어갑니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.0</strong>. Codex 플러그인 설치와 기존 스킬 이전을 지원합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey는 암호 우회 도구도, 복구 도구도, 원격 접속 서비스도 아닙니다. 시동 시 FileVault 잠금, 로그아웃된 세션, 다른 사용자 계정, 접근할 수 없는 잠자기 상태의 Mac은 잠금 해제할 수 없습니다.
 
 > [!WARNING]
-> **상태: 초기 단계(0.2.1).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
+> **상태: 초기 단계(0.3.0).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
 
 ## 빠른 시작
 
@@ -153,11 +153,15 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 ## 에이전트 스킬
 
-setup에서 **Codex**(`~/.agents/skills/sparekey`)와 **Claude Code**(`~/.claude/skills/sparekey`)용 스킬을 설치할 수 있습니다. 나중에 따로 설치해도 됩니다.
+setup에서 Codex CLI를 통해 **Codex 플러그인**을 설치하거나, `~/.claude/skills/sparekey`에 **Claude Code 스킬**을 설치할 수 있습니다. 기존 `--skill codex` 옵션은 이제 플러그인을 설치합니다. 나중에 따로 설치해도 됩니다.
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
 ```
+
+Codex는 `codex plugin add`를 지원하는 CLI가 `PATH`에 있어야 합니다. 내장 플러그인과 기존 로고를 `~/plugins/sparekey`에 준비하고 개인 마켓플레이스에 Sparekey 항목만 추가한 뒤 Codex CLI로 설치합니다. 설치·활성화 확인 후 기존 Codex 스킬을 `~/.sparekey-backups`에 백업하고 기존 `SKILL.md`를 제거합니다. 내용이 다른 스킬이나 플러그인은 확인 후 교체하며, 비대화형 설치에서는 `--force`가 필요합니다. 기존 백업은 보존합니다. 설치 후 새 Codex 대화를 시작하세요. 실패하면 기존 스킬을 유지하고 setup에 경고를 표시합니다.
+
+`doctor`는 플러그인 상태를 검사하며 기존 JSON 키 `codex_skill`을 유지합니다. `uninstall`은 Codex CLI로 플러그인을 제거합니다. Codex를 사용할 수 없으면 경고 후 helper 제거를 계속합니다. 로컬 플러그인 원본, 마켓플레이스 항목, 이전 백업은 재설치·복구용으로 남습니다.
 
 스킬은 에이전트에게 다음을 지시합니다.
 

@@ -5,8 +5,8 @@ final class OutputTests: XCTestCase {
     private func ready() -> DoctorFacts {
         var facts = DoctorFacts()
         facts.installed = true; facts.signed = true; facts.agentLoaded = true
-        facts.helper = .running("0.2.1"); facts.accessibility = true; facts.credentialReadable = true
-        facts.breakerTripped = false; facts.codexSkill = .current
+        facts.helper = .running("0.3.0"); facts.accessibility = true; facts.credentialReadable = true
+        facts.breakerTripped = false; facts.codexPlugin = .current
         facts.stablePath = "/Users/me/Library/Application Support/sparekey/bin/sparekey"; facts.uid = 501
         return facts
     }
@@ -72,6 +72,22 @@ final class OutputTests: XCTestCase {
         XCTAssertEqual(DoctorReport.errorCode(unsafe, facts: facts), "skill_outdated")
         facts.breakerTripped = true
         XCTAssertEqual(DoctorReport.errorCode(DoctorReport.evaluate(facts), facts: facts), "breaker_tripped")
+    }
+    func testCodexPluginDiagnosticsPreserveJSONKeyAndExplainMigration() {
+        for state in [DoctorFacts.CodexPlugin.legacy, .duplicate, .unavailable] {
+            var facts = ready(); facts.codexPlugin = state
+            let checks = DoctorReport.evaluate(facts)
+            XCTAssertEqual(status(checks, "codex_skill"), .warn)
+            XCTAssertTrue(DoctorReport.healthy(checks))
+            XCTAssertEqual(checks.first { $0.name == "codex_skill" }?.title, "Codex plugin")
+        }
+        for state in [DoctorFacts.CodexPlugin.outdated, .disabled] {
+            var facts = ready(); facts.codexPlugin = state
+            let checks = DoctorReport.evaluate(facts)
+            XCTAssertEqual(status(checks, "codex_skill"), .fail)
+            XCTAssertEqual(DoctorReport.errorCode(checks, facts: facts), "skill_outdated")
+            XCTAssertTrue(checks.first { $0.name == "codex_skill" }!.hint.joined().contains("--agent codex"))
+        }
     }
     func testDoctorDependentChecksSkipWhenHelperOrInstallMissing() {
         var facts = ready()

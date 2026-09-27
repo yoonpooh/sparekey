@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.2.1</strong>，解锁后 macOS 立即关闭屏幕时会重新唤醒。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.0</strong>，支持安装 Codex 插件并迁移旧技能。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey 不是密码绕过工具、恢复工具，也不是远程访问服务。它无法在启动时解锁 FileVault，也无法解锁已退出登录的会话、其他用户的账户，或无法连接到的睡眠中的 Mac。
 
 > [!WARNING]
-> **状态：早期阶段（0.2.1）。** 在搭载 Apple silicon 的 macOS 27.2 上可以正常工作：两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。它依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
+> **状态：早期阶段（0.3.0）。** 在搭载 Apple silicon 的 macOS 27.2 上可以正常工作：两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。它依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
 
 ## 快速开始
 
@@ -153,7 +153,7 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 ## 代理技能
 
-setup 可以为 **Codex**（`~/.agents/skills/sparekey`）和 **Claude Code**（`~/.claude/skills/sparekey`）安装技能，也可以之后再安装：
+setup 通过 Codex CLI 安装 **Codex 插件**，或在 `~/.claude/skills/sparekey` 安装 **Claude Code 技能**。现有的 `--skill codex` 选项现在安装插件。Codex CLI 必须位于 `PATH` 中并支持 `codex plugin add`。确认安装后备份并移除旧技能。替换已修改的内容需要确认，或使用 `--force`。完成后请开启新的 Codex 对话。也可以之后再安装：
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude

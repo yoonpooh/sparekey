@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.2.1</strong>, which keeps the display awake when macOS turns it off right after an unlock. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.0</strong>, with Codex plugin installation and migration from the standalone skill. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ With the bundled agent skill, you don't have to mention any of this. Ask for an 
 Sparekey is not a password bypass, recovery tool, or remote-access service. It cannot unlock FileVault at startup, a logged-out session, another user's account, or a sleeping Mac that is unreachable.
 
 > [!WARNING]
-> **Status: early (0.2.1).** Sparekey works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
+> **Status: early (0.3.0).** Sparekey works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
 
 ## Quick start
 
@@ -151,13 +151,17 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 Design notes are in [docs/DESIGN.md](docs/DESIGN.md).
 
-## Agent skills
+## Agent integration
 
-Setup can install a skill for **Codex** (`~/.agents/skills/sparekey`) and **Claude Code** (`~/.claude/skills/sparekey`). You can also install it later:
+Setup installs a **Codex plugin** through Codex CLI, or a **Claude Code skill** at `~/.claude/skills/sparekey`. The existing `--skill codex` option now selects the plugin. You can also install either integration later:
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
 ```
+
+Codex requires a CLI version with `codex plugin add` support on `PATH`. Sparekey writes the bundled plugin and original logo to `~/plugins/sparekey`, adds only its entry to the personal marketplace, and installs it through Codex CLI. After confirming installation and activation, it backs up the old standalone Codex skill under `~/.sparekey-backups` and removes its `SKILL.md`. Differing skills or plugin packages require confirmation, or `--force` outside setup; existing backups are preserved. Start a new Codex thread afterward. If installation fails, the old skill stays in place and setup reports a warning.
+
+`doctor` reports plugin status while preserving the `codex_skill` JSON key. `uninstall` asks Codex CLI to remove the plugin; if Codex is unavailable, it reports a warning and continues removing the helper. The local plugin source, marketplace entry, and migration backups remain available for reinstall or recovery.
 
 The skill tells the agent to:
 

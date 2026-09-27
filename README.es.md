@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.2.1</strong>, que vuelve a encender la pantalla si macOS la apaga justo después de desbloquear. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.3.0</strong>, con instalación del plugin de Codex y migración de la skill anterior. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">
@@ -45,7 +45,7 @@ Con la skill de agente incluida, no tienes que explicarle nada de esto. Pídele 
 Sparekey no sirve para eludir contraseñas, recuperar cuentas ni ofrecer acceso remoto. No puede desbloquear FileVault durante el arranque, una sesión cerrada, la cuenta de otro usuario ni un Mac en reposo al que no se pueda acceder.
 
 > [!WARNING]
-> **Estado: fase temprana (0.2.1).** Funciona en macOS 27.2 con Apple silicon, donde dos ejecuciones del agente sin instrucciones adicionales desbloquearon el Mac, trabajaron y lo volvieron a bloquear correctamente. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility de la pantalla de bloqueo, no de una API pública de desbloqueo.
+> **Estado: fase temprana (0.3.0).** Funciona en macOS 27.2 con Apple silicon, donde dos ejecuciones del agente sin instrucciones adicionales desbloquearon el Mac, trabajaron y lo volvieron a bloquear correctamente. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility de la pantalla de bloqueo, no de una API pública de desbloqueo.
 
 ## Inicio rápido
 
@@ -153,7 +153,7 @@ Las notas de diseño están en [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Skills de agente
 
-Setup puede instalar una skill para **Codex** (`~/.agents/skills/sparekey`) y **Claude Code** (`~/.claude/skills/sparekey`). También puedes instalarla más tarde:
+Setup instala un **plugin de Codex** mediante Codex CLI, o una **skill de Claude Code** en `~/.claude/skills/sparekey`. La opción existente `--skill codex` ahora instala el plugin. Codex CLI debe estar en `PATH` y admitir `codex plugin add`. Tras verificar la instalación, se guarda una copia de la skill anterior y se elimina su `SKILL.md`. Reemplazar contenido modificado requiere confirmación o `--force`. Abre una nueva conversación de Codex al terminar. También puedes instalar la integración más tarde:
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude

@@ -17,14 +17,14 @@ enum Skills {
         if target == "codex" { return FileManager.default.fileExists(atPath: home + "/.agents") || FileManager.default.fileExists(atPath: home + "/.codex") }
         return FileManager.default.fileExists(atPath: home + "/.claude")
     }
-    static func title(_ target: String) -> String { target == "codex" ? "Codex skill" : "Claude Code skill" }
+    static func title(_ target: String) -> String { target == "codex" ? "Codex plugin" : "Claude Code skill" }
     static func prompt() throws -> [String] {
         guard isatty(STDIN_FILENO) == 1 else { throw SparekeyError("Choose skill targets with --agent or --skill.", code: "usage") }
         let palette = Console.palette
         func state(_ target: String) -> String { palette.dim(detected(target) ? "detected" : "not detected") }
-        Console.row(.info, "Agent skills", "let an agent run sparekey for you")
-        Console.line("      1  Codex         " + state("codex"))
-        Console.line("      2  Claude Code   " + state("claude"))
+        Console.row(.info, "Agent integration", "let an agent run sparekey for you")
+        Console.line("      1  Codex plugin       " + state("codex"))
+        Console.line("      2  Claude Code skill  " + state("claude"))
         while true {
             guard let line = Console.ask("    Choose 1, 2, or 1,2 (Enter for none): ") else { throw SparekeyError("Skill selection cancelled.", code: "usage") }
             if let targets = SkillSelection.parsePrompt(line) { return targets }
@@ -36,10 +36,13 @@ enum Skills {
         return Console.ask("    Replace the existing \(title(target)) and keep SKILL.md.bak? [y/N] ") == "y"
     }
     static func validateFolder(_ target: String, create: Bool) throws {
-        let components = target == "codex" ? [".agents", "skills", "sparekey"] : [".claude", "skills", "sparekey"]
+        try validateDirectory(target == "codex" ? ".agents/skills/sparekey" : ".claude/skills/sparekey", create: create)
+    }
+    static func validateDirectory(_ relative: String, create: Bool) throws {
+        let components = relative.split(separator: "/")
         var path = home
         for component in components {
-            path += "/" + component
+            path += "/" + String(component)
             var info = stat()
             if lstat(path, &info) != 0 {
                 guard errno == ENOENT else { throw SparekeyError("Cannot inspect skill directory.") }
@@ -53,7 +56,7 @@ enum Skills {
     }
     enum Outcome { case installed, unchanged, updated, declined }
     static func install(_ target: String, force: Bool) throws -> Outcome {
-        guard ["codex", "claude"].contains(target) else { throw SparekeyError("Unknown skill target.", code: "usage") }
+        guard target == "claude" else { throw SparekeyError("Standalone skills are only installed for Claude Code.", code: "usage") }
         try validateFolder(target, create: false)
         let folder = root(target), file = folder + "/SKILL.md", backup = file + ".bak"
         let new = Data(EmbeddedSkill.content.utf8)
@@ -73,6 +76,7 @@ enum Skills {
         }
     }
     static func installAndReport(_ target: String, force: Bool) throws {
+        if target == "codex" { try CodexPlugin.install(force: force); return }
         let folder = Console.display(root(target))
         switch try install(target, force: force) {
         case .installed: Console.row(.ok, title(target), "installed in " + folder)
@@ -82,6 +86,11 @@ enum Skills {
         }
     }
     static func removeWritten() throws {
+        do { try CodexPlugin.removeInstalled() }
+        catch {
+            Console.row(.warn, "Codex plugin", "could not remove; kept plugin files",
+                        notes: [(error as? SparekeyError)?.description ?? error.localizedDescription])
+        }
         for target in ["codex", "claude"] {
             let folder = root(target), file = folder + "/SKILL.md"
             try validateFolder(target, create: false)
