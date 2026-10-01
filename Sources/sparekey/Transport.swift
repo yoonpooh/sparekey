@@ -1,10 +1,12 @@
 import Foundation
 import Darwin
 import ApplicationServices
+import AppKit
 import SparekeyCore
 
 enum Transport {
     private static let operations = DispatchQueue(label: "sparekey.operations")
+    private static let relock = RelockAuthority()
     private static var coverAttempt: UInt64 = 0 // Accessed only on operations.
     static func address<T>(_ body: (UnsafePointer<sockaddr>, socklen_t) throws -> T) throws -> T {
         var address = sockaddr_un()
@@ -51,7 +53,7 @@ enum Transport {
         }
         throw SparekeyError("Helper message too large.")
     }
-    static func request(_ command: String, noCover: Bool = false) throws -> Reply {
+    static func request(_ command: String, noCover: Bool = false, lockToken: String? = nil, forceLock: Bool = false) throws -> Reply {
         try Paths.checkedDirectory(Paths.base, create: false)
         try Paths.checkedDirectory(Paths.run, create: false)
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
@@ -60,9 +62,9 @@ enum Transport {
         configure(fd, seconds: 20)
         guard try address({ connect(fd, $0, $1) }) == 0 else { throw SparekeyError("Helper is not running. Run 'sparekey setup'.", code: "helper_not_running") }
         try verifyPeer(fd)
-        try send(Request(command, noCover: noCover), to: fd)
+        try send(Request(command, noCover: noCover, lockToken: lockToken, forceLock: forceLock), to: fd)
         let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))
-        guard reply.v == 1, reply.helperVersion == "0.3.0" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        guard reply.v == 1, reply.helperVersion == "0.3.1" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
         if command == "unlock", reply.error?.code == "usage" {
             throw SparekeyError("The installed helper does not support covered unlocks. Run 'sparekey setup' to update it.", code: "helper_version_mismatch")
         }
@@ -77,6 +79,10 @@ enum Transport {
         defer { close(lock) }
         guard flock(lock, LOCK_EX | LOCK_NB) == 0 else { throw SparekeyError("Helper already running.") }
         Handoff.listen()
+        let observer = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screenIsLocked"), object: nil, queue: nil
+        ) { _ in relock.revoke() }
+        defer { DistributedNotificationCenter.default().removeObserver(observer) }
         let fd = socket(AF_UNIX, SOCK_STREAM, 0)
         guard fd >= 0 else { throw SparekeyError("Cannot create helper socket.") }
         defer { close(fd) }
@@ -101,7 +107,7 @@ enum Transport {
                           ["status", "probe", "unlock", "lock", "check"].contains(request.command) else {
                         throw SparekeyError("Unsupported helper request.", code: "usage")
                     }
-                    let reply = try operations.sync { try handle(request.command, noCover: request.noCover) }
+                    let reply = try operations.sync { try handle(request.command, noCover: request.noCover, lockToken: request.lockToken, forceLock: request.forceLock) }
                     try send(reply, to: peer)
                 } catch {
                     let issue = error as? SparekeyError ?? SparekeyError("Helper operation failed.")
@@ -122,7 +128,10 @@ enum Transport {
         }
     }
     private static func startHold() throws -> UInt64 {
-        let hold = AwakeHold.start(onEnd: { token in CoverOverlay.scheduleHide(token: token) })
+        let hold = AwakeHold.start(onEnd: { token in
+            relock.end(hold: token)
+            CoverOverlay.scheduleHide(token: token)
+        })
         guard hold.held else {
             AwakeHold.release()
             throw SparekeyError("The display could not be kept awake. No password was submitted.",
@@ -134,7 +143,8 @@ enum Transport {
         AwakeHold.arm(token: token)
         CoverOverlay.scheduleBind(attempt: attempt, token: token)
     }
-    static func handle(_ command: String, noCover: Bool) throws -> Reply {
+    static func handle(_ command: String, noCover: Bool, lockToken: String? = nil, forceLock: Bool = false) throws -> Reply {
+        let checkpoint = relock.checkpoint()
         let locked = try Screen.locked()
         switch command {
         case "check":
@@ -143,7 +153,12 @@ enum Transport {
             return Reply(state: locked ? "locked" : "unlocked", message: "Helper check completed.", accessibility: AXIsProcessTrusted(), credentialReadable: readable)
         case "status": return Reply(state: locked ? "locked" : "unlocked", message: locked ? "locked" : "unlocked")
         case "lock":
-            try Screen.lock()
+            if forceLock {
+                relock.revoke()
+                try Screen.lock()
+            } else {
+                try relock.lock(token: lockToken) { try Screen.lock() }
+            }
             AwakeHold.release()
             CoverOverlay.scheduleHide()
             return Reply(state: "locked", message: "Computer locked.")
@@ -175,7 +190,8 @@ enum Transport {
             }
             if let probeToken {
                 bindHold(attempt: probeAttempt, token: probeToken)
-                return Reply(state: "unlocked", message: "Already unlocked.")
+                return Reply(state: "unlocked", message: "Already unlocked.",
+                             lockToken: relock.grant(hold: probeToken, checkpoint: checkpoint))
             }
             CoverOverlay.scheduleHide(attempt: probeAttempt)
             return Reply(state: "locked", message: "Password field verified. No password was read or submitted.")
@@ -187,7 +203,8 @@ enum Transport {
                                                       covered: covered,
                                                       noCover: noCover) {
                     if noCover { CoverOverlay.scheduleHide() }
-                    return Reply(state: "unlocked", message: "Already unlocked.")
+                    return Reply(state: "unlocked", message: "Already unlocked.",
+                                 lockToken: currentToken.flatMap { relock.existing(hold: $0) })
                 }
                 coverAttempt &+= 1
                 let unlockedAttempt = coverAttempt
@@ -208,7 +225,8 @@ enum Transport {
                 }
                 AwakeHold.arm(token: token)
                 if !noCover { CoverOverlay.scheduleBind(attempt: unlockedAttempt, token: token) }
-                return Reply(state: "unlocked", message: "Already unlocked. Display kept awake until lock, for up to \(AwakeHold.seconds / 60) minutes.")
+                return Reply(state: "unlocked", message: "Already unlocked. Display kept awake until lock, for up to \(AwakeHold.seconds / 60) minutes.",
+                             lockToken: nil)
             }
             var state = try StateFile.read()
             coverAttempt &+= 1
@@ -241,14 +259,20 @@ enum Transport {
                 AwakeHold.arm(token: holdToken)
                 if !noCover { CoverOverlay.scheduleBind(attempt: attempt, token: holdToken) }
             }
-            return Reply(state: "unlocked", message: "Computer unlocked. Display kept awake until lock, for up to \(AwakeHold.seconds / 60) minutes.")
+            return Reply(state: "unlocked", message: "Computer unlocked. Display kept awake until lock, for up to \(AwakeHold.seconds / 60) minutes.",
+                         lockToken: submitted ? holdToken.flatMap { relock.grant(hold: $0, checkpoint: checkpoint) } : nil)
         default: throw SparekeyError("Unsupported helper request.", code: "usage")
         }
     }
 
     static func lockFromButton() {
+        relock.revoke() // Revoke before queueing, even if the user unlocks immediately.
         operations.async {
-            do { _ = try handle("lock", noCover: false) }
+            do {
+                try Screen.lock()
+                AwakeHold.release()
+                CoverOverlay.scheduleHide()
+            }
             catch { FileHandle.standardError.write(Data(("Lock Mac failed: \(error)\n").utf8)) }
         }
     }

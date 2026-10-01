@@ -3,6 +3,12 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+- Restrict the Sparekey skill to actual macOS desktop computer use; exclude headless and DOM/CDP browser automation and webpage screenshots.
+- Return a relock token from unlock (and grace-period probe). Require it for task cleanup and revoke it immediately on the cover Lock Mac button, system screen-lock notification, or hold expiry. Reject stale and tokenless cleanup requests; explicit manual locking uses `lock --force`.
+- Bump the development CLI/helper version to 0.3.1 to reject outdated helpers. Regenerate embedded skills and the Codex plugin cache version.
+
 ## [0.3.0] - 2026-09-27
 
 - Install a Codex plugin with the existing logo through `setup --skill codex` and `skill install --agent codex`. Verify activation before backing up and removing the old standalone skill; preserve Claude Code's skill installer.

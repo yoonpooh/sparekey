@@ -4,12 +4,12 @@ import SparekeyCore
 import AppKit
 
 let help = """
-sparekey 0.3.0 — unlock and relock this user's logged-in Mac
+sparekey 0.3.1 — unlock and relock this user's logged-in Mac
 
 Usage:
   sparekey                  Show help
   sparekey unlock [--json] [--no-cover]  Unlock once and verify; cover displays by default
-  sparekey lock [--json]    Lock and verify
+  sparekey lock [--json] [--lock-token TOKEN | --force]  Restore a task lock or explicitly lock
   sparekey status [--json]  Read lock state
   sparekey probe [--json]   Verify login field without a password
   sparekey setup [--identity NAME] [--reset-password] [--skill claude|codex|claude,codex] [--no-skill]
@@ -21,6 +21,7 @@ Usage:
 
 Agent integration: Codex installs a plugin (requires Codex CLI); Claude Code installs a skill.
 --force backs up and replaces a differing integration outside interactive setup.
+For lock, --force explicitly locks regardless of task authority; agents must never use it for cleanup.
 
 Exit 0 success, 1 operational failure, 2 usage error. The internal serve command is for launchd.
 """
@@ -45,7 +46,7 @@ if command == .help {
     else { print(help) }
     exit(0)
 }
-if command == .version { print("sparekey 0.3.0"); exit(0) }
+if command == .version { print("sparekey 0.3.1"); exit(0) }
 do {
     guard getuid() != 0, getuid() == geteuid() else { throw SparekeyError("Run as your regular user, without sudo.") }
     switch command {
@@ -102,9 +103,9 @@ do {
         if targets.isEmpty { Console.row(.info, "Agent integration", "none selected") }
     case .doctor: Doctor.run(json: invocation.json)
     case .unlock, .lock, .status, .probe:
-        let reply = try Transport.request(command.rawValue, noCover: invocation.noCover)
+        let reply = try Transport.request(command.rawValue, noCover: invocation.noCover, lockToken: invocation.lockToken, forceLock: command == .lock && invocation.force)
         guard reply.ok else { throw SparekeyError(reply.error?.message ?? "Helper operation failed.", code: reply.error?.code ?? "internal") }
-        if invocation.json { printJSON(Envelope(command: command.rawValue, state: reply.state, message: reply.message ?? "Completed.")) }
+        if invocation.json { printJSON(Envelope(command: command.rawValue, state: reply.state, message: reply.message ?? "Completed.", lockToken: reply.lockToken)) }
         else { print(reply.state ?? reply.message ?? "Completed.") }
     default: break
     }

@@ -277,6 +277,14 @@ sparekey uninstall
 
 잠금 화면과 상호 작용하는 방식은 Cindy의 [MacScreenUnlock.swift](https://github.com/makecindy/cindy/blob/main/packages/remote-credentials-native/Sources/CindyRemoteCredentials/MacScreenUnlock.swift)(Apache-2.0)를 참고했습니다. Sparekey는 독립적으로 구현되었습니다.
 
+### 개발 버전의 잠금 복원 정책
+
+sparekey는 실제 macOS 화면을 조작하는 Computer Use에만 사용합니다. Headless agent-browser, Playwright, DOM/CDP 작업과 웹페이지 스크린샷에는 필요하지 않습니다.
+
+`unlock --json`(또는 잠금 유예 상태를 깨운 `probe --json`)이 반환한 `lockToken`으로 `lock --lock-token TOKEN --json`을 실행해야 작업 종료 시 잠금을 복원할 수 있습니다. 커버의 Lock Mac 버튼, 시스템 잠금 이벤트 또는 화면 유지 종료 시 토큰은 폐기됩니다. 사용자가 비밀번호로 다시 열어도 기존 작업은 재잠금할 수 없습니다. `relock_revoked` 오류가 발생하면 현재 상태를 유지합니다. 토큰 없는 `lock`은 거부되며, 사용자가 직접 잠금을 요청하는 경우에는 `lock --force`를 사용합니다. 에이전트 정리 작업에서 `--force`로 우회하면 안 됩니다.
+
+패치 적용에는 새 바이너리 빌드와 로컬 `sparekey setup`을 통한 helper·스킬 갱신이 필요합니다. 실행 중인 기존 스레드의 스킬 지침은 자동으로 교체되지 않습니다.
+
 ## 라이선스
 
 [MIT](LICENSE) © yoonpooh

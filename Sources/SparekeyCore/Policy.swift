@@ -49,6 +49,7 @@ public struct Invocation {
     public let agent: String?
     public let force: Bool
     public let noCover: Bool
+    public let lockToken: String?
     public static func parse(_ args: [String]) throws -> Invocation {
         func usage(_ message: String = "Invalid arguments. Run 'sparekey help'.") -> SparekeyError { SparekeyError(message, code: "usage") }
         var words = args
@@ -62,10 +63,10 @@ public struct Invocation {
             let target = words.first.flatMap { Command(rawValue: $0.lowercased()) } ?? .help
             if words.count == 1 && target == .help && words[0].lowercased() != "help" { throw usage() }
             guard ![.serve, .continueSetup, .ttyProbe, .ttyProbeChild, .testImport, .credentialHandoff].contains(target) else { throw usage() }
-            return Invocation(command: .help, json: false, helpFor: target, identity: nil, resetPassword: false, noSkill: false, skillTargets: nil, agent: nil, force: false, noCover: false)
+            return Invocation(command: .help, json: false, helpFor: target, identity: nil, resetPassword: false, noSkill: false, skillTargets: nil, agent: nil, force: false, noCover: false, lockToken: nil)
         }
         var json = false, reset = false, noSkill = false, force = false, noCover = false
-        var identity: String?, agent: String?
+        var identity: String?, agent: String?, lockToken: String?
         var skillTargets: [String]?
         var position = 0
         if command == .skill {
@@ -76,13 +77,17 @@ public struct Invocation {
             let word = words[position]
             switch word {
             case "--json" where [.unlock, .lock, .status, .probe, .doctor].contains(command) && !json: json = true
+            case "--lock-token" where command == .lock && lockToken == nil:
+                position += 1
+                guard position < words.count, UUID(uuidString: words[position]) != nil else { throw usage() }
+                lockToken = words[position]
             case "--no-cover" where command == .unlock && !noCover: noCover = true
             case "--reset-password" where (command == .setup || command == .continueSetup) && !reset: reset = true
             case "--no-skill" where command == .setup && !noSkill: noSkill = true
             case "--skill" where command == .setup:
                 position += 1; guard position < words.count, let chosen = SkillSelection.parseFlag(words[position]) else { throw usage() }
                 skillTargets = Array(Set((skillTargets ?? []) + chosen)).sorted()
-            case "--force" where command == .skill && !force: force = true
+            case "--force" where [.skill, .lock].contains(command) && !force: force = true
             case "--identity" where command == .setup && identity == nil:
                 position += 1; guard position < words.count, !words[position].hasPrefix("--") else { throw usage() }; identity = words[position]
             case "--agent" where command == .skill && agent == nil:
@@ -91,8 +96,9 @@ public struct Invocation {
             }
             position += 1
         }
+        guard !(force && lockToken != nil) else { throw usage("--force and --lock-token cannot be combined.") }
         guard !(noSkill && skillTargets != nil) else { throw usage("--skill and --no-skill cannot be combined.") }
-        return Invocation(command: command, json: json, helpFor: nil, identity: identity, resetPassword: reset, noSkill: noSkill, skillTargets: skillTargets, agent: agent, force: force, noCover: noCover)
+        return Invocation(command: command, json: json, helpFor: nil, identity: identity, resetPassword: reset, noSkill: noSkill, skillTargets: skillTargets, agent: agent, force: force, noCover: noCover, lockToken: lockToken)
     }
 }
 
@@ -102,29 +108,37 @@ public struct Envelope: Codable {
     public let command: String
     public let state: String?
     public let message: String?
+    public let lockToken: String?
     public let error: ErrorBody?
-    public init(command: String, state: String? = nil, message: String) {
-        self.ok = true; self.command = command; self.state = state; self.message = message; self.error = nil
+    public init(command: String, state: String? = nil, message: String, lockToken: String? = nil) {
+        self.ok = true; self.command = command; self.state = state; self.message = message; self.lockToken = lockToken; self.error = nil
     }
     public init(command: String, code: String, message: String) {
-        self.ok = false; self.command = command; self.state = nil; self.message = nil; self.error = ErrorBody(code: code, message: message)
+        self.ok = false; self.command = command; self.state = nil; self.message = nil; self.lockToken = nil; self.error = ErrorBody(code: code, message: message)
     }
 }
 public struct Request: Codable {
     public let v: Int
     public let command: String
     public let noCover: Bool
-    // v2 makes a new unlock fail at an older helper before it can submit a password.
-    public init(_ command: String, noCover: Bool = false) { v = command == "unlock" ? 2 : 1; self.command = command; self.noCover = noCover }
+    public let lockToken: String?
+    public let forceLock: Bool
+    // v3 rejects old helpers before an unlock/probe can wake or submit a password.
+    public init(_ command: String, noCover: Bool = false, lockToken: String? = nil, forceLock: Bool = false) { v = (lockToken != nil || forceLock || ["unlock", "probe"].contains(command)) ? 3 : 1; self.command = command; self.noCover = noCover; self.lockToken = lockToken; self.forceLock = forceLock }
     public var isSupportedByCoverHelper: Bool {
-        (v == 1 && !noCover) || (v == 2 && command == "unlock")
+        (v == 1 && !noCover && lockToken == nil && !forceLock)
+            || (v == 2 && command == "unlock" && lockToken == nil && !forceLock)
+            || (v == 3 && ["unlock", "probe"].contains(command) && lockToken == nil && !forceLock && (command == "unlock" || !noCover))
+            || (v == 3 && command == "lock" && !noCover && ((lockToken != nil) != forceLock))
     }
-    private enum CodingKeys: String, CodingKey { case v, command, noCover }
+    private enum CodingKeys: String, CodingKey { case v, command, noCover, lockToken, forceLock }
     public init(from decoder: Decoder) throws {
         let fields = try decoder.container(keyedBy: CodingKeys.self)
         v = try fields.decode(Int.self, forKey: .v)
         command = try fields.decode(String.self, forKey: .command)
         noCover = try fields.decodeIfPresent(Bool.self, forKey: .noCover) ?? false
+        lockToken = try fields.decodeIfPresent(String.self, forKey: .lockToken)
+        forceLock = try fields.decodeIfPresent(Bool.self, forKey: .forceLock) ?? false
     }
 }
 public struct Reply: Codable {
@@ -136,11 +150,12 @@ public struct Reply: Codable {
     public let helperVersion: String
     public let accessibility: Bool?
     public let credentialReadable: Bool?
-    public init(state: String? = nil, message: String, accessibility: Bool? = nil, credentialReadable: Bool? = nil) {
-        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.3.0"; self.accessibility = accessibility; self.credentialReadable = credentialReadable
+    public let lockToken: String?
+    public init(state: String? = nil, message: String, accessibility: Bool? = nil, credentialReadable: Bool? = nil, lockToken: String? = nil) {
+        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.3.1"; self.accessibility = accessibility; self.credentialReadable = credentialReadable; self.lockToken = lockToken
     }
     public init(code: String, message: String) {
-        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.3.0"; accessibility = nil; credentialReadable = nil
+        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.3.1"; accessibility = nil; credentialReadable = nil; lockToken = nil
     }
 }
 

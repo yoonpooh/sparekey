@@ -54,7 +54,7 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(try JSONSerialization.jsonObject(with: data) as? [String: Any] != nil, true)
         XCTAssertEqual(try JSONDecoder().decode(Envelope.self, from: data).error?.code, "rate_limited")
         XCTAssertEqual(try JSONDecoder().decode(Request.self, from: JSONEncoder().encode(Request("status"))).v, 1)
-        XCTAssertEqual(Request("unlock").v, 2)
+        XCTAssertEqual(Request("unlock").v, 3)
         XCTAssertTrue(Request("unlock").isSupportedByCoverHelper)
         XCTAssertTrue(Request("unlock", noCover: true).isSupportedByCoverHelper)
         XCTAssertTrue(try JSONDecoder().decode(Request.self, from: JSONEncoder().encode(Request("unlock", noCover: true))).noCover)

@@ -1,6 +1,6 @@
 {
   "name": "sparekey",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Unlock your logged-in Mac for authorized GUI tasks and restore the screen lock when the task is done.",
   "author": {
     "name": "yoonpooh",
