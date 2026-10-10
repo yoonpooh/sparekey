@@ -9,7 +9,7 @@ sparekey 0.3.1 — unlock and relock this user's logged-in Mac
 Usage:
   sparekey                  Show help
   sparekey unlock [--json] [--no-cover]  Unlock once and verify; cover displays by default
-  sparekey lock [--json] [--lock-token TOKEN | --force]  Restore a task lock or explicitly lock
+  sparekey lock [--json] [--lock-token TOKEN | --force]  Lock and turn off displays
   sparekey status [--json]  Read lock state
   sparekey probe [--json]   Verify login field without a password
   sparekey setup [--identity NAME] [--reset-password] [--skill claude|codex|claude,codex] [--no-skill]

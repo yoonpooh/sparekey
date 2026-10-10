@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.3.0</strong>，支持安装 Codex 插件并迁移旧技能。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.1</strong>，支持 Unlock Mac 身份验证、重新锁定后关闭显示器和任务专属的重新锁定令牌。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">
@@ -34,8 +34,8 @@ Mac 一锁屏，操作电脑和浏览器的代理就会停下来。结果要么�
 Sparekey 是一个小巧的 macOS 命令行工具。它让代理使用您保存在本机的密码，解锁**您自己的、已经登录的**会话，完成任务后再恢复锁定。代理工作期间，一块黑色遮罩会挡住实体显示器，旁人看不到屏幕内容。
 
 ```sh
-sparekey unlock   # let the agent get to work; cover the physical displays
-sparekey lock     # restore the lock when it is done
+sparekey unlock --json                   # save the returned lockToken
+sparekey lock --lock-token TOKEN --json  # restore the lock with that token
 ```
 
 装好随附的代理技能后，这些步骤都不用再交代。只要让代理在锁定的 Mac 上做一件普通的 GUI 任务，它就会自己检查锁定状态、解锁、干活，最后重新锁屏。
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey 不是密码绕过工具、恢复工具，也不是远程访问服务。它无法在启动时解锁 FileVault，也无法解锁已退出登录的会话、其他用户的账户，或无法连接到的睡眠中的 Mac。
 
 > [!WARNING]
-> **状态：早期阶段（0.3.0）。** 在搭载 Apple silicon 的 macOS 27.2 上可以正常工作：两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。它依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
+> **状态：早期阶段（0.3.1）。** 在搭载 Apple silicon 的 macOS 27.2 上可以正常工作：两次未经额外提示的代理运行都成功完成了解锁、工作和重新锁定。其他 macOS 版本尚未测试。它依赖锁屏界面的 Accessibility 布局，而不是公开的解锁 API。
 
 ## 快速开始
 
@@ -122,11 +122,11 @@ sparekey doctor
 
 ## 主要功能
 
-- **带确认的解锁与锁定。** `unlock` 只提交一次密码，并确认状态已改变；`lock` 锁定后同样会确认，已经锁定时不做任何操作。
-- **屏幕遮罩。** 灵感来自 Codex 的 Locked Computer Use。代理工作时，一块显示 Sparekey 标志、“Your agent is using this Mac”字样和 **Lock Mac** 按钮的黑色遮罩会挡住实体显示器。
+- **带确认的解锁与锁定。** `unlock` 只提交一次密码，并确认状态已改变；`lock` 确认锁定后释放显示器唤醒保持，再关闭显示器。
+- **屏幕遮罩。** 灵感来自 Codex 的 Locked Computer Use。代理工作时，一块显示 Sparekey 标志、“Your agent is using this Mac”字样和 **Unlock Mac** 按钮的黑色遮罩会挡住实体显示器。
   - 遮罩在提交密码**之前**就已铺在锁屏界面下方，桌面一瞬间也不会露出来。
   - 屏幕截图和录屏都不会捕获遮罩，因此代理看到的是真实屏幕，点击和键盘输入也会正常传到下面的应用。
-  - 点击一次 **Lock Mac** 即可锁定 Mac。运行 `sparekey lock` 或以其他方式重新锁定时，遮罩会被移除。
+  - 点击 **Unlock Mac** 并在 macOS 对话框中完成身份验证后，即可显示屏幕并接管。取消验证会保留遮罩；验证成功会撤销任务的重新锁定权限。
   - 使用 `sparekey unlock --no-cover` 可以不显示遮罩。遮罩只是挡住屏幕，并不会锁定 Mac。
 - **保持唤醒。** 确认解锁后，显示器会一直保持唤醒，直到运行 `sparekey lock`、以其他方式重新锁定，或满 60 分钟，避免任务进行到一半因闲置睡眠而重新锁定。
 - **锁屏恢复。** 如果锁屏界面亮着，却只显示壁纸和时钟而看不到账户，Sparekey 会让显示器休眠→唤醒一次，把账户重新调出来。它绝不会在未经验证的界面上输入。
@@ -185,7 +185,7 @@ restrict this when delegating to other agents.
 | 命令 | 作用 |
 | --- | --- |
 | `sparekey unlock [--no-cover]` | 解锁一次并确认状态；默认遮住实体显示器，并在 `lock` 或满 60 分钟前保持显示器唤醒 |
-| `sparekey lock` | 锁定并确认；已锁定时不做任何操作 |
+| `sparekey lock --lock-token TOKEN` / `lock --force` | 锁定并关闭显示器；任务清理需要令牌，手动锁定使用 `--force` |
 | `sparekey status` | 输出 `locked` 或 `unlocked` |
 | `sparekey probe` | 在不读取密码的情况下唤醒显示器并检查密码框 |
 | `sparekey setup` | 安装或刷新 helper、凭据和技能。选项：`--skill`、`--no-skill`、`--reset-password`、`--identity NAME` |
@@ -218,7 +218,7 @@ restrict this when delegating to other agents.
 请先运行 `sparekey doctor`。每个失败项都会给出修复方法。
 
 **遮罩会锁定我的 Mac 吗？**
-不会。它只挡住屏幕，并不锁定。请点击遮罩上的 **Lock Mac**，或运行 `sparekey lock`。
+不会。它只挡住屏幕，并不锁定。接管时请点击 **Unlock Mac** 并完成身份验证。手动锁定并关闭显示器时，请运行 `sparekey lock --force`。
 
 **为什么代理的截图里看不到遮罩？**
 这是有意设计的。屏幕截图和录屏会排除遮罩，所以代理看到的是真实屏幕。

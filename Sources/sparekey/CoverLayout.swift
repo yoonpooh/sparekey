@@ -31,17 +31,17 @@ enum CoverLayout {
         (text as NSString).draw(in: rect, withAttributes: [.font: font, .foregroundColor: color, .paragraphStyle: style])
     }
 
-    static func drawButton(in bounds: NSRect, highlighted: Bool) {
+    static func drawButton(in bounds: NSRect, highlighted: Bool, authenticating: Bool = false) {
         NSColor.white.withAlphaComponent(highlighted ? 0.22 : 0.14).setFill()
         NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2).fill()
         let font = NSFont.systemFont(ofSize: 15, weight: .medium)
-        let text = "Lock Mac" as NSString
+        let text = (authenticating ? "Verifying…" : "Unlock Mac") as NSString
         let attributes: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: NSColor.white]
         let textSize = text.size(withAttributes: attributes)
         let symbolSize: CGFloat = 17
         let gap: CGFloat = 9
         let x = (bounds.width - symbolSize - gap - textSize.width) / 2
-        let symbol = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "Lock")?
+        let symbol = NSImage(systemSymbolName: "lock.open.fill", accessibilityDescription: "Unlock")?
             .withSymbolConfiguration(.init(pointSize: symbolSize, weight: .medium))?
             .withSymbolConfiguration(.init(paletteColors: [.white]))
         symbol?.draw(in: NSRect(x: x, y: (bounds.height - symbolSize) / 2, width: symbolSize, height: symbolSize),
@@ -54,11 +54,23 @@ final class CoverArtworkView: NSView {
     override func draw(_ dirtyRect: NSRect) { CoverLayout.drawArtwork(in: bounds) }
 }
 
-final class CoverLockButtonView: NSView {
+final class CoverUnlockButtonView: NSView {
     var action: (() -> Void)?
+    var authenticating = false { didSet { needsDisplay = true } }
     private var hovering = false { didSet { needsDisplay = true } }
     private var pressing = false { didSet { needsDisplay = true } }
-    override func draw(_ dirtyRect: NSRect) { CoverLayout.drawButton(in: bounds, highlighted: hovering || pressing) }
+    override func isAccessibilityElement() -> Bool { true }
+    override func accessibilityRole() -> NSAccessibility.Role? { .button }
+    override func accessibilityLabel() -> String? { authenticating ? "Verifying…" : "Unlock Mac" }
+    override func isAccessibilityEnabled() -> Bool { !authenticating }
+    override func accessibilityPerformPress() -> Bool {
+        guard !authenticating else { return false }
+        action?()
+        return true
+    }
+    override func draw(_ dirtyRect: NSRect) {
+        CoverLayout.drawButton(in: bounds, highlighted: hovering || pressing, authenticating: authenticating)
+    }
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         for area in trackingAreas { removeTrackingArea(area) }
@@ -66,6 +78,10 @@ final class CoverLockButtonView: NSView {
     }
     override func mouseEntered(with event: NSEvent) { hovering = true }
     override func mouseExited(with event: NSEvent) { hovering = false; pressing = false }
-    override func mouseDown(with event: NSEvent) { pressing = true; action?() }
+    override func mouseDown(with event: NSEvent) {
+        guard !authenticating else { return }
+        pressing = true
+        action?()
+    }
     override func mouseUp(with event: NSEvent) { pressing = false }
 }

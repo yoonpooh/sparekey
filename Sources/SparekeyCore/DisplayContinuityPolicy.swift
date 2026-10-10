@@ -35,6 +35,31 @@ public enum LockCommandPolicy {
     }
 }
 
+public enum RelockDisplayTransaction {
+    // A failed/revoked lock must not turn off a user's unlocked display. Stop the
+    // recovery watcher before sleeping, otherwise it would wake the display again.
+    public static func run(lock: () throws -> Void, release: () -> Void,
+                           sleep: () throws -> Void) throws {
+        try lock()
+        release()
+        try sleep()
+    }
+}
+
+public enum AuthenticatedTakeoverTransaction {
+    // Authentication is only valid for the hold that showed the prompt. Cancelled
+    // prompts and stale successes must not reveal a later task or revoke its token.
+    @discardableResult
+    public static func run(authenticated: Bool, expectedHold: UInt64,
+                           currentHold: () -> UInt64?, isUnlocked: () -> Bool,
+                           revoke: () -> Void, release: () -> Void) -> Bool {
+        guard authenticated, currentHold() == expectedHold, isUnlocked() else { return false }
+        revoke()
+        release()
+        return true
+    }
+}
+
 public enum UnlockedRequestPolicy {
     public static func canReuseHold(held: Bool, covered: Bool, noCover: Bool) -> Bool {
         held && (noCover || covered)

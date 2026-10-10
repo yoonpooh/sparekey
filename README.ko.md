@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.0</strong>. Codex 플러그인 설치와 기존 스킬 이전을 지원합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.1</strong>. Unlock Mac 인증 후 직접 사용, 재잠금 시 화면 끄기, 작업별 재잠금 토큰을 지원합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -34,8 +34,8 @@
 Sparekey는 로컬에 저장한 암호로 에이전트가 **본인의, 이미 로그인된** 세션의 잠금을 풀고, 작업을 마친 뒤 다시 잠그게 해 주는 작은 macOS CLI입니다. 에이전트가 일하는 동안에는 검은 가림막이 실제 디스플레이를 가려 주변 사람이 화면을 볼 수 없습니다.
 
 ```sh
-sparekey unlock   # let the agent get to work; cover the physical displays
-sparekey lock     # restore the lock when it is done
+sparekey unlock --json                   # save the returned lockToken
+sparekey lock --lock-token TOKEN --json  # restore the lock with that token
 ```
 
 함께 제공되는 에이전트 스킬을 설치하면 이 과정을 따로 지시할 필요가 없습니다. 잠긴 Mac에서 평범한 GUI 작업을 부탁하면, 에이전트가 알아서 잠금 상태를 확인하고, 잠금을 풀고, 작업한 다음, 화면을 다시 잠급니다.
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey는 암호 우회 도구도, 복구 도구도, 원격 접속 서비스도 아닙니다. 시동 시 FileVault 잠금, 로그아웃된 세션, 다른 사용자 계정, 접근할 수 없는 잠자기 상태의 Mac은 잠금 해제할 수 없습니다.
 
 > [!WARNING]
-> **상태: 초기 단계(0.3.0).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
+> **상태: 초기 단계(0.3.1).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
 
 ## 빠른 시작
 
@@ -122,11 +122,11 @@ sparekey doctor
 
 ## 주요 기능
 
-- **확인까지 하는 잠금 해제와 잠금.** `unlock`은 암호를 한 번 제출하고 바뀐 상태를 확인합니다. `lock`은 잠근 뒤 확인하며, 이미 잠겨 있으면 아무것도 하지 않습니다.
-- **화면 가림막.** Codex의 Locked Computer Use에서 영감을 받았습니다. Sparekey 로고와 “Your agent is using this Mac” 문구, **Lock Mac** 버튼이 있는 검은 가림막이 에이전트가 일하는 동안 실제 디스플레이를 가립니다.
+- **확인까지 하는 잠금 해제와 잠금.** `unlock`은 암호를 한 번 제출하고 바뀐 상태를 확인합니다. `lock`은 잠금을 확인한 뒤 화면 유지 기능을 해제하고 디스플레이도 끕니다.
+- **화면 가림막.** Codex의 Locked Computer Use에서 영감을 받았습니다. Sparekey 로고와 “Your agent is using this Mac” 문구, **Unlock Mac** 버튼이 있는 검은 가림막이 에이전트가 일하는 동안 실제 디스플레이를 가립니다.
   - 암호를 제출하기 **전에** 잠금 화면 아래에 먼저 깔리므로 데스크톱이 잠깐이라도 드러나지 않습니다.
   - 스크린샷과 화면 녹화에는 잡히지 않아 에이전트는 실제 화면을 그대로 보고, 클릭과 입력도 아래로 전달됩니다.
-  - **Lock Mac**을 한 번 누르면 Mac이 잠깁니다. `sparekey lock`이나 다른 방법으로 다시 잠그면 가림막이 사라집니다.
+  - **Unlock Mac**을 누르고 macOS 확인창에서 인증하면 가림막이 사라져 바로 사용할 수 있습니다. 인증을 취소하면 가림막이 유지됩니다. `sparekey lock`이나 다른 방법으로 다시 잠그면 가림막이 사라집니다.
   - `sparekey unlock --no-cover`로 가림막 없이 풀 수 있습니다. 가림막은 화면을 가릴 뿐 Mac을 잠그지는 않습니다.
 - **디스플레이 깨어 있기.** 잠금 해제가 확인되면 `sparekey lock`, 다른 방식의 재잠금, 또는 60분 경과 중 먼저 오는 시점까지 디스플레이가 잠들지 않습니다. 작업 도중 유휴 잠자기로 다시 잠기는 일을 막습니다.
 - **잠금 화면 복구.** 깨어 있는 잠금 화면에 계정 대신 배경화면과 시계만 보이면, 디스플레이를 한 번 잠재웠다가 깨워 계정을 다시 불러옵니다. 확인되지 않은 화면에는 절대 입력하지 않습니다.
@@ -189,7 +189,7 @@ restrict this when delegating to other agents.
 | 명령어 | 설명 |
 | --- | --- |
 | `sparekey unlock [--no-cover]` | 한 번 잠금을 풀고 상태를 확인합니다. 기본적으로 실제 디스플레이를 가리고, `lock` 또는 60분 경과까지 디스플레이를 깨워 둡니다 |
-| `sparekey lock` | 잠그고 확인합니다. 이미 잠겨 있으면 아무것도 하지 않습니다 |
+| `sparekey lock --lock-token TOKEN` / `lock --force` | 잠그고 화면을 끕니다. 작업 정리는 토큰, 직접 잠금은 `--force`를 사용합니다 |
 | `sparekey status` | `locked` 또는 `unlocked`를 출력합니다 |
 | `sparekey probe` | 암호를 읽지 않고 디스플레이를 깨워 암호 입력란을 확인합니다 |
 | `sparekey setup` | helper, 자격 증명, 스킬을 설치하거나 갱신합니다. 옵션: `--skill`, `--no-skill`, `--reset-password`, `--identity NAME` |
@@ -213,7 +213,7 @@ restrict this when delegating to other agents.
 
 종료 코드: `0` 성공, `1` 작업 실패, `2` 사용법 오류. `status`는 어느 상태를 보고하든 성공이므로 `state` 값을 확인하세요.
 
-오류 코드: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `internal`. `doctor --json`은 `skill_outdated`도 보고할 수 있고, 검사별 결과를 담은 `statuses` 맵(`ok`, `warn`, `fail`, `skip`)을 추가합니다.
+오류 코드: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json`은 `skill_outdated`도 보고할 수 있고, 검사별 결과를 담은 `statuses` 맵(`ok`, `warn`, `fail`, `skip`)을 추가합니다.
 
 </details>
 
@@ -222,7 +222,7 @@ restrict this when delegating to other agents.
 먼저 `sparekey doctor`를 실행하세요. 실패한 항목마다 해결 방법이 함께 나옵니다.
 
 **가림막이 Mac을 잠가 주나요?**
-아닙니다. 화면을 가릴 뿐 잠그지는 않습니다. 가림막의 **Lock Mac**을 누르거나 `sparekey lock`을 실행하세요.
+아닙니다. 화면을 가릴 뿐 잠그지는 않습니다. 직접 사용하려면 가림막의 **Unlock Mac**을 누르고 인증하세요. 직접 Mac을 잠그고 화면도 끄려면 `sparekey lock --force`를 실행하세요.
 
 **에이전트 스크린샷에 가림막이 보이지 않아요.**
 의도된 동작입니다. 스크린샷과 화면 녹화에서는 가림막이 빠지므로 에이전트는 실제 화면을 봅니다.
@@ -281,7 +281,7 @@ sparekey uninstall
 
 sparekey는 실제 macOS 화면을 조작하는 Computer Use에만 사용합니다. Headless agent-browser, Playwright, DOM/CDP 작업과 웹페이지 스크린샷에는 필요하지 않습니다.
 
-`unlock --json`(또는 잠금 유예 상태를 깨운 `probe --json`)이 반환한 `lockToken`으로 `lock --lock-token TOKEN --json`을 실행해야 작업 종료 시 잠금을 복원할 수 있습니다. 커버의 Lock Mac 버튼, 시스템 잠금 이벤트 또는 화면 유지 종료 시 토큰은 폐기됩니다. 사용자가 비밀번호로 다시 열어도 기존 작업은 재잠금할 수 없습니다. `relock_revoked` 오류가 발생하면 현재 상태를 유지합니다. 토큰 없는 `lock`은 거부되며, 사용자가 직접 잠금을 요청하는 경우에는 `lock --force`를 사용합니다. 에이전트 정리 작업에서 `--force`로 우회하면 안 됩니다.
+`unlock --json`(또는 잠금 유예 상태를 깨운 `probe --json`)이 반환한 `lockToken`으로 `lock --lock-token TOKEN --json`을 실행해야 작업 종료 시 잠금을 복원할 수 있습니다. 커버의 Unlock Mac 버튼에서 인증 완료, 시스템 잠금 이벤트 또는 화면 유지 종료 시 토큰은 폐기됩니다. 사용자가 비밀번호로 다시 열어도 기존 작업은 재잠금할 수 없습니다. `relock_revoked` 오류가 발생하면 현재 상태를 유지합니다. 토큰 없는 `lock`은 거부되며, 사용자가 직접 잠금을 요청하는 경우에는 `lock --force`를 사용합니다. 에이전트 정리 작업에서 `--force`로 우회하면 안 됩니다.
 
 패치 적용에는 새 바이너리 빌드와 로컬 `sparekey setup`을 통한 helper·스킬 갱신이 필요합니다. 실행 중인 기존 스레드의 스킬 지침은 자동으로 교체되지 않습니다.
 

@@ -45,6 +45,8 @@ public struct CoverOwnership {
 
     public func owns(token: UInt64) -> Bool { currentToken == token }
 
+    public var boundToken: UInt64? { currentToken }
+
     public mutating func adopt(token: UInt64) -> Bool {
         guard currentAttempt == nil, (currentToken == nil || currentToken == token),
               token > lastEndedToken else { return false }

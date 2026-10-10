@@ -196,15 +196,14 @@ enum Screen {
             && CFEqual(a.elements[0], b.elements[0])
     }
 
-    private static func revealAccount(activity: inout IOPMAssertionID, slept: inout Bool, woke: inout Bool) throws {
-        if activity != 0 { IOPMAssertionRelease(activity); activity = 0 }
+    private static func requestDisplaySleep(context: String, errorCode: String) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
         process.arguments = ["displaysleepnow"]
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
         do { try process.run() }
-        catch { throw SparekeyError("Could not start display sleep recovery.", code: "field_not_ready") }
+        catch { throw SparekeyError("Could not start \(context).", code: errorCode) }
         let processDeadline = ProcessInfo.processInfo.systemUptime + 1.5
         while process.isRunning && ProcessInfo.processInfo.systemUptime < processDeadline {
             Thread.sleep(forTimeInterval: 0.05)
@@ -222,11 +221,37 @@ enum Screen {
                     Thread.sleep(forTimeInterval: 0.02)
                 }
             }
-            throw SparekeyError("Display sleep recovery timed out.", code: "field_not_ready")
+            throw SparekeyError("\(context) timed out.", code: errorCode)
         }
         guard process.terminationStatus == 0 else {
-            throw SparekeyError("Display sleep recovery failed (pmset exit \(process.terminationStatus)).", code: "field_not_ready")
+            throw SparekeyError("\(context) failed (pmset exit \(process.terminationStatus)).", code: errorCode)
         }
+    }
+
+    static func sleepAfterLock() throws {
+        guard try locked() else {
+            throw SparekeyError("The user unlocked the Mac. Display left on.", code: "relock_revoked")
+        }
+        try requestDisplaySleep(context: "Display sleep after lock", errorCode: "display_sleep_not_confirmed")
+        let deadline = ProcessInfo.processInfo.systemUptime + 2.0
+        repeat {
+            guard try locked() else {
+                throw SparekeyError("The user unlocked the Mac. No further display sleep requested.", code: "relock_revoked")
+            }
+            var count: UInt32 = 0
+            guard CGGetOnlineDisplayList(0, nil, &count) == .success, count > 0 else { break }
+            var displays = [CGDirectDisplayID](repeating: 0, count: Int(count))
+            guard CGGetOnlineDisplayList(count, &displays, &count) == .success, count > 0 else { break }
+            if displays.prefix(Int(count)).allSatisfy({ CGDisplayIsAsleep($0) != 0 }) { return }
+            Thread.sleep(forTimeInterval: 0.05)
+        } while ProcessInfo.processInfo.systemUptime < deadline
+        throw SparekeyError("Mac locked, but display sleep was not confirmed. Another app or input may have woken it.",
+                            code: "display_sleep_not_confirmed")
+    }
+
+    private static func revealAccount(activity: inout IOPMAssertionID, slept: inout Bool, woke: inout Bool) throws {
+        if activity != 0 { IOPMAssertionRelease(activity); activity = 0 }
+        try requestDisplaySleep(context: "Display sleep recovery", errorCode: "field_not_ready")
         let sleepDeadline = ProcessInfo.processInfo.systemUptime + 2.0
         repeat {
             if CGDisplayIsAsleep(CGMainDisplayID()) != 0 { slept = true; break }

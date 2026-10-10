@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新リリース: <strong>0.3.0</strong>（Codex プラグインのインストールと旧スキルからの移行）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
+  <sub>最新リリース: <strong>0.3.1</strong>（Unlock Mac の認証と再ロック時の画面消灯）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
 </p>
 
 <p align="center">
@@ -34,8 +34,8 @@
 Sparekey は、ローカルに保存したパスワードを使って、エージェントが**自分自身の、すでにログイン済みの**セッションのロックを解除し、作業を終えたら再びロックできるようにする小さな macOS CLI です。エージェントの作業中は黒いカバーが物理ディスプレイを覆い、周りの人から画面を隠します。
 
 ```sh
-sparekey unlock   # let the agent get to work; cover the physical displays
-sparekey lock     # restore the lock when it is done
+sparekey unlock --json                   # save the returned lockToken
+sparekey lock --lock-token TOKEN --json  # restore the lock with that token
 ```
 
 付属のエージェントスキルを入れておけば、この手順をいちいち指示する必要はありません。ロック中の Mac でふつうの GUI 作業を頼むだけで、エージェントがロック状態を確認し、解除して作業し、最後に自分で画面をロックし直します。
@@ -45,7 +45,7 @@ sparekey lock     # restore the lock when it is done
 Sparekey はパスワード回避ツールでも、復旧ツールでも、リモートアクセスサービスでもありません。起動時の FileVault、ログアウトしたセッション、別のユーザーのアカウント、アクセスできないスリープ中の Mac は解除できません。
 
 > [!WARNING]
-> **状況: 初期段階（0.3.0）。** Apple silicon 搭載の macOS 27.2 で動作し、特に指示を与えずに実行したエージェントが、ロック解除・作業・再ロックを 2 回とも成功させています。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存しています。
+> **状況: 初期段階（0.3.1）。** Apple silicon 搭載の macOS 27.2 で動作し、特に指示を与えずに実行したエージェントが、ロック解除・作業・再ロックを 2 回とも成功させています。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存しています。
 
 ## クイックスタート
 
@@ -122,11 +122,11 @@ sparekey doctor
 
 ## 主な機能
 
-- **確認つきのロック解除とロック。** `unlock` はパスワードを 1 回だけ送信し、状態が変わったことを確認します。`lock` はロックして確認し、すでにロック済みなら何もしません。
-- **画面カバー。** Codex の Locked Computer Use に着想を得た機能です。Sparekey のロゴ、「Your agent is using this Mac」、**Lock Mac** ボタンを表示する黒いカバーが、エージェントの作業中に物理ディスプレイを覆います。
+- **確認つきのロック解除とロック。** `unlock` はパスワードを 1 回だけ送信し、状態を確認します。`lock` はロックを確認してから画面のスリープ抑止を解除し、画面を消します。
+- **画面カバー。** Codex の Locked Computer Use に着想を得た機能です。Sparekey のロゴ、「Your agent is using this Mac」、**Unlock Mac** ボタンを表示する黒いカバーが、エージェントの作業中に物理ディスプレイを覆います。
   - パスワード送信の**前に**ロック画面の下へ敷かれるので、デスクトップが一瞬でも見えることはありません。
   - スクリーンショットや画面収録には写らないため、エージェントは実際の画面を見られ、クリックやキー入力もそのまま下のアプリに届きます。
-  - **Lock Mac** を 1 回クリックすると Mac がロックされます。`sparekey lock` やその他の再ロックでカバーは消えます。
+  - **Unlock Mac** をクリックし、macOS のダイアログで認証すると画面が表示されます。キャンセルするとカバーは残ります。認証成功でタスクの再ロック権限は無効になります。
   - `sparekey unlock --no-cover` でカバーなしにできます。カバーは画面を隠すだけで、Mac をロックするものではありません。
 - **スリープを防止。** ロック解除を確認した後は、`sparekey lock`、ほかの方法による再ロック、または 60 分経過のいずれかまでディスプレイをスリープさせません。作業中にアイドルスリープで再ロックされるのを防ぎます。
 - **ロック画面の復旧。** 点灯中のロック画面にアカウントではなく壁紙と時計しか表示されない場合、ディスプレイのスリープ→復帰を 1 回行ってアカウントを呼び戻します。確認できていない画面に入力することは決してありません。
@@ -185,7 +185,7 @@ restrict this when delegating to other agents.
 | コマンド | 内容 |
 | --- | --- |
 | `sparekey unlock [--no-cover]` | 1 回だけロックを解除して状態を確認します。デフォルトで物理ディスプレイを覆い、`lock` か 60 分経過までディスプレイをスリープさせません |
-| `sparekey lock` | ロックして確認します。すでにロック済みなら何もしません |
+| `sparekey lock --lock-token TOKEN` / `lock --force` | ロックして画面を消します。タスク終了にはトークン、手動ロックには `--force` を使います |
 | `sparekey status` | `locked` または `unlocked` を出力します |
 | `sparekey probe` | パスワードを読まずにディスプレイを起こし、パスワード欄を確認します |
 | `sparekey setup` | helper、認証情報、スキルをインストールまたは更新します。オプション: `--skill`、`--no-skill`、`--reset-password`、`--identity NAME` |
@@ -218,7 +218,7 @@ restrict this when delegating to other agents.
 まず `sparekey doctor` を実行してください。失敗した項目ごとに対処法が表示されます。
 
 **カバーは Mac をロックしますか？**
-いいえ。画面を隠すだけで、ロックはしません。カバーの **Lock Mac** をクリックするか、`sparekey lock` を実行してください。
+いいえ。画面を隠すだけで、ロックはしません。自分で操作するには **Unlock Mac** をクリックして認証してください。手動でロックして画面を消すには `sparekey lock --force` を実行してください。
 
 **エージェントのスクリーンショットにカバーが写っていません。**
 仕様どおりです。スクリーンショットや画面収録からはカバーが除外されるので、エージェントは実際の画面を見ています。

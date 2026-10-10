@@ -13,6 +13,8 @@ final class CoverOverlay {
     static let shared = CoverOverlay()
     private var panels: [NSPanel] = []
     private var buttonPanel: NSPanel?
+    private var authentication: TakeoverAuthentication?
+    private var authenticationID: UUID?
     private var visible = false
     private var ownership = CoverOwnership()
     private init() {
@@ -77,6 +79,9 @@ final class CoverOverlay {
 
     func show() { visible = true; rebuild() }
     func hide() {
+        authentication?.cancel()
+        authentication = nil
+        authenticationID = nil
         visible = false
         panels.forEach { $0.orderOut(nil); $0.close() }
         panels.removeAll()
@@ -121,13 +126,30 @@ final class CoverOverlay {
         button.ignoresMouseEvents = false
         button.isOpaque = false
         button.backgroundColor = .clear
-        let view = CoverLockButtonView(frame: NSRect(origin: .zero, size: frame.size))
+        let view = CoverUnlockButtonView(frame: NSRect(origin: .zero, size: frame.size))
         view.action = { [weak self] in
             guard self?.visible == true else { return }
-            Transport.lockFromButton()
+            self?.authenticateTakeover()
         }
         button.contentView = view
         button.orderFrontRegardless()
         buttonPanel = button
+    }
+
+    private func authenticateTakeover() {
+        guard authentication == nil, let token = ownership.boundToken, fullyCovered else { return }
+        let authenticator = TakeoverAuthentication()
+        let id = UUID()
+        authentication = authenticator
+        authenticationID = id
+        (buttonPanel?.contentView as? CoverUnlockButtonView)?.authenticating = true
+        authenticator.begin { [weak self] success in
+            guard let self, self.authenticationID == id else { return }
+            self.authentication = nil
+            self.authenticationID = nil
+            (self.buttonPanel?.contentView as? CoverUnlockButtonView)?.authenticating = false
+            guard success, self.visible, self.ownership.owns(token: token) else { return }
+            Transport.takeControlFromButton(token: token)
+        }
     }
 }

@@ -2,6 +2,36 @@ import XCTest
 @testable import SparekeyCore
 
 final class DisplayContinuityTests: XCTestCase {
+    func testRelockStopsRecoveryBeforeSleeping() throws {
+        var events: [String] = []
+        try RelockDisplayTransaction.run(lock: { events.append("locked") },
+                                        release: { events.append("released") },
+                                        sleep: { events.append("asleep") })
+        XCTAssertEqual(events, ["locked", "released", "asleep"])
+    }
+
+    func testRejectedRelockNeverSleepsOrReleasesAnotherUsersHold() {
+        let authority = RelockAuthority()
+        let token = authority.grant(hold: 1, checkpoint: authority.checkpoint())
+        authority.revoke()
+        XCTAssertThrowsError(try RelockDisplayTransaction.run(lock: {
+            try authority.lock(token: token) { XCTFail("Must not lock after user takeover") }
+        }, release: { XCTFail("Must not release after rejected lock") },
+           sleep: { XCTFail("Must not sleep after rejected lock") }))
+    }
+
+    func testFailedDisplaySleepStillReleasesHoldAndDoesNotRetryLock() {
+        var locks = 0, releases = 0, sleeps = 0
+        XCTAssertThrowsError(try RelockDisplayTransaction.run(lock: { locks += 1 },
+                                                             release: { releases += 1 }, sleep: {
+            sleeps += 1
+            throw SparekeyError("display woke", code: "display_sleep_not_confirmed")
+        }))
+        XCTAssertEqual(locks, 1)
+        XCTAssertEqual(releases, 1)
+        XCTAssertEqual(sleeps, 1)
+    }
+
     func testGracePeriodLockFlagRetriesWakeAfterCooldownWithoutEndingHold() {
         XCTAssertEqual(DisplayContinuityPolicy.watcher(locked: true, displayAsleep: true,
                                                        canWake: true), .wake)

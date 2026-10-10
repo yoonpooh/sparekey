@@ -153,15 +153,18 @@ enum Transport {
             return Reply(state: locked ? "locked" : "unlocked", message: "Helper check completed.", accessibility: AXIsProcessTrusted(), credentialReadable: readable)
         case "status": return Reply(state: locked ? "locked" : "unlocked", message: locked ? "locked" : "unlocked")
         case "lock":
-            if forceLock {
-                relock.revoke()
-                try Screen.lock()
-            } else {
-                try relock.lock(token: lockToken) { try Screen.lock() }
-            }
-            AwakeHold.release()
-            CoverOverlay.scheduleHide()
-            return Reply(state: "locked", message: "Computer locked.")
+            try RelockDisplayTransaction.run(lock: {
+                if forceLock {
+                    relock.revoke()
+                    try Screen.lock()
+                } else {
+                    try relock.lock(token: lockToken) { try Screen.lock() }
+                }
+            }, release: {
+                AwakeHold.release()
+                CoverOverlay.scheduleHide()
+            }, sleep: { try Screen.sleepAfterLock() })
+            return Reply(state: "locked", message: "Computer locked and display asleep.")
         case "probe":
             if !locked { return Reply(state: "unlocked", message: "Already unlocked.") }
             coverAttempt &+= 1
@@ -265,15 +268,20 @@ enum Transport {
         }
     }
 
-    static func lockFromButton() {
-        relock.revoke() // Revoke before queueing, even if the user unlocks immediately.
+    static func takeControlFromButton(token: UInt64) {
+        // Revoke before queueing cleanup: an already queued task-completion lock
+        // must not win after the user authenticates. Scope this to the old hold.
+        relock.revoke(hold: token)
         operations.async {
-            do {
-                try Screen.lock()
+            // A late authentication callback cannot end a later task's hold or
+            // reveal a screen that has since been locked. No credential is read.
+            AuthenticatedTakeoverTransaction.run(authenticated: true, expectedHold: token,
+                                                  currentHold: { AwakeHold.currentToken() },
+                                                  isUnlocked: { (try? Screen.locked()) == false },
+                                                  revoke: { relock.revoke(hold: token) }, release: {
                 AwakeHold.release()
-                CoverOverlay.scheduleHide()
-            }
-            catch { FileHandle.standardError.write(Data(("Lock Mac failed: \(error)\n").utf8)) }
+                CoverOverlay.scheduleHide(token: token)
+            })
         }
     }
 }

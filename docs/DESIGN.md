@@ -184,12 +184,14 @@ For a covered unlock, the helper orders a borderless black panel on every
 display before reading the credential or submitting it. The lock screen stays
 above the panels until it dismisses. Panels exclude screen capture; the black
 panels pass mouse input through, while a separate small button panel accepts
-a click to lock. AppKit runs on the main thread, and socket and button
+a click to authenticate with a fresh LocalAuthentication context. Successful device-owner authentication revokes task relock authority, releases the matching hold, and removes its cover without locking. Cancelled or stale authentication cannot reveal a later task. AppKit runs on the main thread, and socket and button
 operations share a serial queue. Failed unlocks remove the pending cover; a
 confirmed unlock binds it to the AwakeHold watcher token. Lock, external
 relock, and the hold deadline remove only the cover owned by that token.
 
 ## Lock method
+
+After confirming the lock, release AwakeHold before requesting `pmset displaysleepnow`, so the recovery watcher cannot wake the displays again. Verify that all online displays are asleep. A sleep failure is reported separately (`display_sleep_not_confirmed`); it never triggers another lock attempt. Skip display sleep if the user has already unlocked the session.
 
 Keep Control-Command-Q plus lock-state verification. The helper is signed
 with hardened runtime and no exception entitlements. The private fallback

@@ -25,6 +25,13 @@ public final class RelockAuthority {
         mutex.lock(); defer { mutex.unlock() }
         epoch &+= 1; token = nil; hold = nil
     }
+    @discardableResult
+    public func revoke(hold requested: UInt64) -> Bool {
+        mutex.lock(); defer { mutex.unlock() }
+        guard hold == requested else { return false }
+        epoch &+= 1; token = nil; hold = nil
+        return true
+    }
     public func end(hold: UInt64) {
         mutex.lock(); defer { mutex.unlock() }
         guard self.hold == hold else { return }

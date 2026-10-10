@@ -3,11 +3,13 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.1] - 2026-10-10
 
+- Turn off the displays after a verified relock and release the display recovery watcher before sleeping. Report unconfirmed display sleep without retrying the lock.
+- Replace the cover Lock Mac button with Unlock Mac. Require fresh native macOS authentication, then reveal the screen and revoke the agent task's relock authority; keep the cover on cancellation or stale authentication.
 - Restrict the Sparekey skill to actual macOS desktop computer use; exclude headless and DOM/CDP browser automation and webpage screenshots.
-- Return a relock token from unlock (and grace-period probe). Require it for task cleanup and revoke it immediately on the cover Lock Mac button, system screen-lock notification, or hold expiry. Reject stale and tokenless cleanup requests; explicit manual locking uses `lock --force`.
-- Bump the development CLI/helper version to 0.3.1 to reject outdated helpers. Regenerate embedded skills and the Codex plugin cache version.
+- Return a relock token from unlock (and grace-period probe). Require it for task cleanup and revoke it immediately on authenticated cover takeover, system screen-lock notification, or hold expiry. Reject stale and tokenless cleanup requests; explicit manual locking uses `lock --force`.
+- Require matching 0.3.1 CLI/helper versions. Regenerate embedded skills and the Codex plugin cache version.
 
 ## [0.3.0] - 2026-09-27
 

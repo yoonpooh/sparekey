@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.3.0</strong>, con instalación del plugin de Codex y migración de la skill anterior. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.3.1</strong>, con autenticación de Unlock Mac, apagado de pantallas al volver a bloquear y tokens de bloqueo por tarea. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">
@@ -34,8 +34,8 @@ Los agentes que manejan el ordenador o el navegador se detienen en cuanto el Mac
 Sparekey es una pequeña CLI para macOS que permite a un agente desbloquear **tu propia sesión, ya iniciada**, con una contraseña guardada en local, terminar su tarea y volver a bloquearla. Mientras el agente trabaja, una cubierta negra tapa las pantallas físicas para que nadie cercano vea lo que ocurre.
 
 ```sh
-sparekey unlock   # let the agent get to work; cover the physical displays
-sparekey lock     # restore the lock when it is done
+sparekey unlock --json                   # save the returned lockToken
+sparekey lock --lock-token TOKEN --json  # restore the lock with that token
 ```
 
 Con la skill de agente incluida, no tienes que explicarle nada de esto. Pídele una tarea de GUI normal en un Mac bloqueado y el agente comprobará el bloqueo, desbloqueará, hará el trabajo y volverá a bloquear la pantalla por su cuenta.
@@ -45,7 +45,7 @@ Con la skill de agente incluida, no tienes que explicarle nada de esto. Pídele 
 Sparekey no sirve para eludir contraseñas, recuperar cuentas ni ofrecer acceso remoto. No puede desbloquear FileVault durante el arranque, una sesión cerrada, la cuenta de otro usuario ni un Mac en reposo al que no se pueda acceder.
 
 > [!WARNING]
-> **Estado: fase temprana (0.3.0).** Funciona en macOS 27.2 con Apple silicon, donde dos ejecuciones del agente sin instrucciones adicionales desbloquearon el Mac, trabajaron y lo volvieron a bloquear correctamente. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility de la pantalla de bloqueo, no de una API pública de desbloqueo.
+> **Estado: fase temprana (0.3.1).** Funciona en macOS 27.2 con Apple silicon, donde dos ejecuciones del agente sin instrucciones adicionales desbloquearon el Mac, trabajaron y lo volvieron a bloquear correctamente. No se han probado otras versiones de macOS. Depende de la disposición de Accessibility de la pantalla de bloqueo, no de una API pública de desbloqueo.
 
 ## Inicio rápido
 
@@ -122,11 +122,11 @@ Después de `brew upgrade sparekey` o de recompilar, vuelve a ejecutar `sparekey
 
 ## Características
 
-- **Desbloqueo y bloqueo verificados.** `unlock` envía la contraseña una sola vez y confirma el nuevo estado; `lock` bloquea y lo confirma. Si ya está bloqueado, no hace nada.
-- **Cubierta de pantalla.** Inspirada en Locked Computer Use de Codex. Una cubierta negra con el logotipo de Sparekey, el mensaje «Your agent is using this Mac» y un botón **Lock Mac** tapa las pantallas físicas mientras trabaja el agente.
+- **Desbloqueo y bloqueo verificados.** `unlock` envía la contraseña una sola vez y confirma el nuevo estado; `lock` verifica el bloqueo, libera la retención de pantalla y apaga las pantallas.
+- **Cubierta de pantalla.** Inspirada en Locked Computer Use de Codex. Una cubierta negra con el logotipo de Sparekey, el mensaje «Your agent is using this Mac» y un botón **Unlock Mac** tapa las pantallas físicas mientras trabaja el agente.
   - Se coloca debajo de la pantalla de bloqueo **antes** de enviar la contraseña, así que el escritorio nunca queda a la vista ni por un instante.
   - Las capturas y grabaciones de pantalla la excluyen: el agente sigue viendo la pantalla real y sus clics y pulsaciones llegan a las apps de debajo.
-  - Un clic en **Lock Mac** bloquea el Mac. `sparekey lock` o cualquier otro bloqueo la retira.
+  - Haz clic en **Unlock Mac** y autentícate en el diálogo de macOS para mostrar la pantalla y tomar el control. Cancelar conserva la cubierta; la autenticación revoca el permiso de bloqueo de la tarea.
   - `sparekey unlock --no-cover` la omite. La cubierta oculta la pantalla, pero no la bloquea.
 - **Pantalla despierta.** Tras un desbloqueo confirmado, la pantalla no entra en reposo hasta `sparekey lock`, cualquier otro bloqueo o 60 minutos, para que el reposo por inactividad no bloquee el Mac a mitad de la tarea.
 - **Recuperación de la pantalla de bloqueo.** Si la pantalla bloqueada está encendida pero muestra solo el fondo y el reloj en lugar de tu cuenta, Sparekey hace un ciclo de reposo→activación de la pantalla para recuperar la cuenta. Nunca escribe en una pantalla que no haya verificado.
@@ -185,7 +185,7 @@ Sin esta línea, la skill igualmente desbloquea para los trabajos de GUI que pid
 | Comando | Qué hace |
 | --- | --- |
 | `sparekey unlock [--no-cover]` | Desbloquea una vez, confirma el estado, cubre las pantallas físicas por defecto y mantiene la pantalla despierta hasta `lock` o 60 minutos |
-| `sparekey lock` | Bloquea y lo confirma; si ya está bloqueado, no hace nada |
+| `sparekey lock --lock-token TOKEN` / `lock --force` | Bloquea y apaga las pantallas; la tarea necesita su token y el bloqueo manual usa `--force` |
 | `sparekey status` | Muestra `locked` o `unlocked` |
 | `sparekey probe` | Activa la pantalla y comprueba el campo de contraseña sin leer la contraseña |
 | `sparekey setup` | Instala o renueva el helper, la credencial y las skills. Opciones: `--skill`, `--no-skill`, `--reset-password`, `--identity NAME` |
@@ -209,7 +209,7 @@ Ejecutar `sparekey` sin argumentos muestra la ayuda; nunca desbloquea.
 
 Códigos de salida: `0` éxito, `1` fallo operativo, `2` error de uso. Un `status` correcto puede informar de cualquiera de los dos estados, así que revisa `state`.
 
-Códigos de error: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `internal`. `doctor --json` también puede informar de `skill_outdated` y añade un mapa `statuses` por comprobación (`ok`, `warn`, `fail`, `skip`).
+Códigos de error: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` también puede informar de `skill_outdated` y añade un mapa `statuses` por comprobación (`ok`, `warn`, `fail`, `skip`).
 
 </details>
 
@@ -218,7 +218,7 @@ Códigos de error: `usage`, `not_set_up`, `helper_not_running`, `helper_version_
 Empieza por `sparekey doctor`. Cada fila con error indica cómo solucionarlo.
 
 **¿La cubierta bloquea mi Mac?**
-No. Oculta la pantalla, pero no la bloquea. Haz clic en **Lock Mac** en la cubierta o ejecuta `sparekey lock`.
+No. Oculta la pantalla, pero no la bloquea. Haz clic en **Unlock Mac** y autentícate para tomar el control. Para bloquear manualmente y apagar las pantallas, ejecuta `sparekey lock --force`.
 
 **¿Por qué no veo la cubierta en las capturas del agente?**
 Es intencionado. Las capturas y grabaciones de pantalla excluyen la cubierta, así que el agente ve la pantalla real.

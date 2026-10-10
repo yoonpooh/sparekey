@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.0</strong>, with Codex plugin installation and migration from the standalone skill. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.1</strong>, with authenticated Unlock Mac takeover, display sleep after relock, and scoped relock tokens. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">
@@ -34,8 +34,8 @@ Computer-use and browser-use agents stall the moment your Mac locks. You either 
 Sparekey is a small macOS CLI that lets an agent unlock **your own, already logged-in** session with a password you saved locally, finish its task, and restore the lock. While the agent works, a black cover hides the physical displays from people nearby.
 
 ```sh
-sparekey unlock   # let the agent get to work; cover the physical displays
-sparekey lock     # restore the lock when it is done
+sparekey unlock --json                   # save the returned lockToken
+sparekey lock --lock-token TOKEN --json  # restore the lock with that token
 ```
 
 With the bundled agent skill, you don't have to mention any of this. Ask for an ordinary GUI task on a locked Mac, and the agent checks the lock, unlocks, does the work, and locks the screen again on its own.
@@ -45,7 +45,7 @@ With the bundled agent skill, you don't have to mention any of this. Ask for an 
 Sparekey is not a password bypass, recovery tool, or remote-access service. It cannot unlock FileVault at startup, a logged-out session, another user's account, or a sleeping Mac that is unreachable.
 
 > [!WARNING]
-> **Status: early (0.3.0).** Sparekey works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
+> **Status: early (0.3.1).** Sparekey works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
 
 ## Quick start
 
@@ -122,11 +122,11 @@ After `brew upgrade sparekey` or rebuilding, run `sparekey setup` again. Until y
 
 ## Features
 
-- **Verified unlock and lock.** `unlock` submits the password once and confirms the new state; `lock` locks and confirms. Already locked is a no-op.
-- **Screen cover.** Inspired by Codex's Locked Computer Use. A black cover with the Sparekey logo, “Your agent is using this Mac,” and a **Lock Mac** button hides the physical displays while the agent works.
+- **Verified unlock and lock.** `unlock` submits the password once and confirms the new state; `lock` verifies the lock, releases the display hold, and turns off the displays.
+- **Screen cover.** Inspired by Codex's Locked Computer Use. A black cover with the Sparekey logo, “Your agent is using this Mac,” and an **Unlock Mac** button hides the physical displays while the agent works.
   - It appears beneath the lock screen **before** password submission, so the desktop never flashes.
   - Screenshots and screen recordings exclude it, so the agent still sees the real screen, and its clicks and typing pass through.
-  - One click on **Lock Mac** locks the Mac. `sparekey lock` or any relock removes the cover.
+  - Click **Unlock Mac** and authenticate in the macOS dialog to reveal the screen and take control. Cancelling keeps the cover. `sparekey lock` or any relock removes the cover.
   - `sparekey unlock --no-cover` skips it. The cover hides the screen but does not lock it.
 - **Stays awake.** After a confirmed unlock, the display stays awake until `sparekey lock`, any other relock, or 60 minutes, so idle sleep does not relock the Mac mid-task.
 - **Lock-screen recovery.** If an awake locked screen shows only the wallpaper and clock instead of your account, Sparekey performs one display sleep→wake cycle to bring the account back. It never types into an unverified screen.
@@ -189,7 +189,7 @@ Without it, the skill still unlocks for the GUI tasks you ask for. The line keep
 | Command | What it does |
 | --- | --- |
 | `sparekey unlock [--no-cover]` | Unlock once, confirm the state, cover the physical displays by default, and keep the display awake until `lock` or 60 minutes |
-| `sparekey lock` | Lock and confirm; already locked is a no-op |
+| `sparekey lock --lock-token TOKEN` / `lock --force` | Lock and turn off displays; task cleanup requires its token, manual locking uses `--force` |
 | `sparekey status` | Print `locked` or `unlocked` |
 | `sparekey probe` | Wake the display and check the password field without reading the password |
 | `sparekey setup` | Install or refresh the helper, credential, and skills. Options: `--skill`, `--no-skill`, `--reset-password`, `--identity NAME` |
@@ -213,7 +213,7 @@ Running `sparekey` with no arguments shows help; it never unlocks.
 
 Exit codes: `0` success, `1` operational failure, `2` usage error. A successful `status` can report either state, so check `state`.
 
-Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
+Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
 
 </details>
 
@@ -222,7 +222,7 @@ Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismat
 Start with `sparekey doctor`. Every failing row shows how to fix it.
 
 **Does the cover lock my Mac?**
-No. It hides the screen but does not lock it. Click **Lock Mac** on the cover, or run `sparekey lock`.
+No. It hides the screen but does not lock it. Click **Unlock Mac** and authenticate to take control. For an explicit manual lock, run `sparekey lock --force` to lock and turn off the displays.
 
 **Why don't I see the cover in the agent's screenshots?**
 That is by design. Screenshots and screen recordings exclude the cover, so the agent sees the real screen.
