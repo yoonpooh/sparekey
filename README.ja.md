@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新リリース: <strong>0.3.1</strong>（Unlock Mac の認証と再ロック時の画面消灯）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
+  <sub>最新リリース: <strong>0.3.2</strong>（アカウント表示の読み取り待機と、名前の不一致・画面検証エラーの区別）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
 </p>
 
 <p align="center">
@@ -209,7 +209,9 @@ restrict this when delegating to other agents.
 
 終了コード: `0` 成功、`1` 処理の失敗、`2` 使い方の誤り。`status` はどちらの状態を返しても成功扱いなので、`state` を確認してください。
 
-エラーコード: `usage`、`not_set_up`、`helper_not_running`、`helper_version_mismatch`、`no_console_session`、`accessibility_missing`、`credential_unavailable`、`login_window_unsupported`、`field_not_ready`、`cover_unavailable`、`rate_limited`、`breaker_tripped`、`unlock_not_confirmed`、`lock_not_confirmed`、`internal`。`doctor --json` は `skill_outdated` を返すこともあり、チェックごとの `statuses` マップ（`ok`、`warn`、`fail`、`skip`）も含みます。
+エラーコード: `usage`、`not_set_up`、`helper_not_running`、`helper_version_mismatch`、`no_console_session`、`accessibility_missing`、`credential_unavailable`、`login_account_mismatch`、`login_window_unsupported`、`field_not_ready`、`cover_unavailable`、`rate_limited`、`breaker_tripped`、`unlock_not_confirmed`、`lock_not_confirmed`、`internal`。`doctor --json` は `skill_outdated` を返すこともあり、チェックごとの `statuses` マップ（`ok`、`warn`、`fail`、`skip`）も含みます。
+
+`login_account_mismatch` は読み取った名前が現在のユーザー名と完全に一致しない場合に返します。読み取れない表示は制限時間内で待機し、準備できなければ `field_not_ready` で停止します。`doctor` の成功はロック画面の検証を意味しません。
 
 </details>
 

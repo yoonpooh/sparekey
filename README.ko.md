@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.1</strong>. Unlock Mac 인증 후 직접 사용, 재잠금 시 화면 끄기, 작업별 재잠금 토큰을 지원합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.2</strong>. 잠금 화면의 계정 표시를 읽을 수 없으면 정해진 시간 안에서 기다리고, 이름 불일치와 화면 판별 오류를 구분합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -213,7 +213,9 @@ restrict this when delegating to other agents.
 
 종료 코드: `0` 성공, `1` 작업 실패, `2` 사용법 오류. `status`는 어느 상태를 보고하든 성공이므로 `state` 값을 확인하세요.
 
-오류 코드: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json`은 `skill_outdated`도 보고할 수 있고, 검사별 결과를 담은 `statuses` 맵(`ok`, `warn`, `fail`, `skip`)을 추가합니다.
+오류 코드: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_account_mismatch`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json`은 `skill_outdated`도 보고할 수 있고, 검사별 결과를 담은 `statuses` 맵(`ok`, `warn`, `fail`, `skip`)을 추가합니다.
+
+`login_account_mismatch`는 읽힌 이름이 현재 사용자 이름과 정확히 일치하지 않을 때만 보고합니다. 읽을 수 없는 계정 표시는 제한된 시간 안에서 기다린 뒤 `field_not_ready`로 중단합니다. `doctor` 정상 결과는 잠금 화면 검증을 뜻하지 않습니다.
 
 </details>
 

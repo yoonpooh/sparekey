@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-10-12
+
+- Treat a missing or empty FocusedUser account label as temporary preparation state, using the existing bounded wait and single display recovery before stopping. Never accept an unverified account or broaden name matching.
+- Distinguish a populated name mismatch (`login_account_mismatch`) from duplicate labels, unsupported element roles, and unreadable labels. Do not expose account names in errors.
+- Clarify skill error reporting and that a healthy `doctor` result does not verify the lock screen. Retain fail-closed password checks and the no-retry rule after a failed probe or unlock.
+- Require matching 0.3.2 CLI/helper versions and refresh the bundled agent assets.
+
 ## [0.3.1] - 2026-10-10
 
 - Turn off the displays after a verified relock and release the display recovery watcher before sleeping. Report unconfirmed display sleep without retrying the lock.

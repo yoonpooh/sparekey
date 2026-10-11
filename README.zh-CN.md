@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.3.1</strong>，支持 Unlock Mac 身份验证、重新锁定后关闭显示器和任务专属的重新锁定令牌。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.2</strong>，在限定时间内等待尚不可读的账户标签，并区分名称不匹配与锁屏验证错误。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">
@@ -209,7 +209,9 @@ restrict this when delegating to other agents.
 
 退出码：`0` 成功，`1` 操作失败，`2` 用法错误。`status` 无论报告哪种状态都算成功，请检查 `state`。
 
-错误码：`usage`、`not_set_up`、`helper_not_running`、`helper_version_mismatch`、`no_console_session`、`accessibility_missing`、`credential_unavailable`、`login_window_unsupported`、`field_not_ready`、`cover_unavailable`、`rate_limited`、`breaker_tripped`、`unlock_not_confirmed`、`lock_not_confirmed`、`internal`。`doctor --json` 还可能报告 `skill_outdated`，并附带按检查项列出的 `statuses` 映射（`ok`、`warn`、`fail`、`skip`）。
+错误码：`usage`、`not_set_up`、`helper_not_running`、`helper_version_mismatch`、`no_console_session`、`accessibility_missing`、`credential_unavailable`、`login_account_mismatch`、`login_window_unsupported`、`field_not_ready`、`cover_unavailable`、`rate_limited`、`breaker_tripped`、`unlock_not_confirmed`、`lock_not_confirmed`、`internal`。`doctor --json` 还可能报告 `skill_outdated`，并附带按检查项列出的 `statuses` 映射（`ok`、`warn`、`fail`、`skip`）。
+
+`login_account_mismatch` 仅表示读取到的名称与当前用户名不完全匹配。不可读的账户标签会在限定时间内等待，仍未就绪时以 `field_not_ready` 停止。`doctor` 成功不代表锁屏账户已验证。
 
 </details>
 

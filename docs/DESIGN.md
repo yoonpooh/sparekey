@@ -120,7 +120,7 @@ sparekey --version       also `version`
 
 - Stable error codes: `usage`, `not_set_up`, `helper_not_running`,
   `helper_version_mismatch`, `no_console_session`, `accessibility_missing`,
-  `credential_unavailable`, `login_window_unsupported`, `field_not_ready`,
+  `credential_unavailable`, `login_account_mismatch`, `login_window_unsupported`, `field_not_ready`,
   `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`,
   `lock_not_confirmed`, `internal`.
 - Diagnostics go to stderr. Honor `NO_COLOR` and non-TTY output.

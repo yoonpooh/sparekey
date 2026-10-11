@@ -134,7 +134,6 @@ enum Screen {
             throw SparekeyError("Unsupported login window layout.", code: "login_window_unsupported", transient: true)
         }
         var elements: [AXUIElement] = [], nodes: [LoginNode] = []
-        var ownLabel = false, labelCount = 0
         let deadline = ProcessInfo.processInfo.systemUptime + 3
         func visit(_ element: AXUIElement, parent: Int?, depth: Int) throws {
             guard depth < 12 else {
@@ -155,15 +154,6 @@ enum Screen {
             let identifier = try value(element, kAXIdentifierAttribute) as? String ?? ""
             guard try value(element, kAXModalAttribute) as? Bool != true else {
                 throw SparekeyError("A modal login dialog is open. Unlock manually.", code: "login_window_unsupported")
-            }
-            if identifier == "FocusedUser" {
-                labelCount += 1
-                guard labelCount == 1, role == kAXStaticTextRole,
-                      let label = try value(element, kAXValueAttribute) as? String,
-                      [NSUserName(), NSFullUserName()].contains(label) else {
-                    throw SparekeyError("The visible login account does not match this user.", code: "login_window_unsupported")
-                }
-                ownLabel = true
             }
             var writable: DarwinBoolean = false
             if identifier == "UserPasswordTextField" {
@@ -187,6 +177,9 @@ enum Screen {
             }
         }
         try visit(windows[0], parent: nil, depth: 0)
+        let ownLabel = try LoginAccountPolicy.verify(in: nodes, allowedNames: [NSUserName(), NSFullUserName()]) {
+            try value(elements[$0], kAXValueAttribute) as? String
+        }
         return Snapshot(pid: app.processIdentifier, started: info.pbi_start_tvsec,
                         microseconds: info.pbi_start_tvusec, elements: elements, nodes: nodes, ownLabel: ownLabel)
     }
@@ -377,7 +370,7 @@ enum Screen {
 
     static func validate(_ target: Snapshot, field: Int) throws -> Snapshot {
         let next = try snapshot()
-        guard target.ownLabel, next.ownLabel else { throw SparekeyError("Current-account label changed.", code: "login_window_unsupported") }
+        guard target.ownLabel, next.ownLabel else { throw SparekeyError("The current-account label could not be verified. No further input was sent.", code: "login_window_unsupported") }
         let nextField = try LoginPolicy.field(in: next.nodes)
         guard sameWindow(target, next), CFEqual(target.elements[field], next.elements[nextField]) else {
             throw SparekeyError("The password field changed. No further input was sent.", code: "login_window_unsupported")

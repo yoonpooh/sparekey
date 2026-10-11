@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.1</strong>, with authenticated Unlock Mac takeover, display sleep after relock, and scoped relock tokens. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.2</strong>, with bounded waiting for unreadable account labels and specific account-verification errors. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">
@@ -213,7 +213,7 @@ Running `sparekey` with no arguments shows help; it never unlocks.
 
 Exit codes: `0` success, `1` operational failure, `2` usage error. A successful `status` can report either state, so check `state`.
 
-Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
+Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_account_mismatch`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
 
 </details>
 
@@ -242,6 +242,9 @@ launchctl kickstart -k "gui/$(id -u)/io.github.yoonpooh.sparekey.helper"
 
 **`breaker_tripped` or `unlock_not_confirmed`**
 The saved password may be wrong, for example after you changed it. Run `sparekey setup --reset-password` locally.
+
+**`login_account_mismatch`, `login_window_unsupported`, or `field_not_ready`**
+A populated account name mismatch stops immediately. Missing or empty account labels are retried only within the helper's existing preparation budget, with at most one display recovery. Duplicate labels and unsupported roles stop with distinct messages. Check the specific error; an unreadable label is not evidence of another account. `doctor` checks the installation, not the lock-screen layout. Never loop probe or unlock after a failed verification.
 
 **`credential_unavailable` after an upgrade**
 Run `sparekey setup` again and enter the password when asked.

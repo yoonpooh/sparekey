@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.3.1</strong>, con autenticación de Unlock Mac, apagado de pantallas al volver a bloquear y tokens de bloqueo por tarea. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.3.2</strong>, con espera limitada para etiquetas de cuenta ilegibles y errores específicos de verificación de cuenta. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">
@@ -209,7 +209,9 @@ Ejecutar `sparekey` sin argumentos muestra la ayuda; nunca desbloquea.
 
 Códigos de salida: `0` éxito, `1` fallo operativo, `2` error de uso. Un `status` correcto puede informar de cualquiera de los dos estados, así que revisa `state`.
 
-Códigos de error: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` también puede informar de `skill_outdated` y añade un mapa `statuses` por comprobación (`ok`, `warn`, `fail`, `skip`).
+Códigos de error: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_account_mismatch`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` también puede informar de `skill_outdated` y añade un mapa `statuses` por comprobación (`ok`, `warn`, `fail`, `skip`).
+
+`login_account_mismatch` indica que el nombre leído no coincide exactamente con el usuario actual. Las etiquetas ilegibles se esperan dentro de un plazo limitado; si no están listas, se detiene con `field_not_ready`. Un `doctor` correcto no verifica la pantalla de bloqueo.
 
 </details>
 
