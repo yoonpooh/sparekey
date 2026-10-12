@@ -228,7 +228,7 @@ the password again.
 
 `setup --skill codex` and `skill install --agent codex` install the bundled
 Codex plugin through `codex plugin add sparekey@<personal-marketplace-name>`.
-The plugin source lives at `~/plugins/sparekey`. The installer preserves the
+The plugin source lives at `~/.codex/plugins/sparekey`. Legacy `~/plugins/sparekey` registrations are rewritten in place. Both package trees are checked without following symlinks before writes; the legacy source is moved to a unique backup only after Codex verifies the new source, version, and activation. Failed installation restores the previous catalog only if our written bytes are still present. The installer preserves the
 personal marketplace's name, metadata, order, and other entries. An existing
 Sparekey entry pointing at another source is rejected before writes.
 Codex CLI must be on PATH and support plugin commands. Child processes use

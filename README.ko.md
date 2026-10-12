@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.2</strong>. 잠금 화면의 계정 표시를 읽을 수 없으면 정해진 시간 안에서 기다리고, 이름 불일치와 화면 판별 오류를 구분합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.3</strong>. Codex 플러그인 원본 경로를 통일하고, 이전 경로의 파일을 백업하면서 등록을 옮깁니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -159,7 +159,7 @@ setup에서 Codex CLI를 통해 **Codex 플러그인**을 설치하거나, `~/.c
 sparekey skill install --agent codex   # or: --agent claude
 ```
 
-Codex는 `codex plugin add`를 지원하는 CLI가 `PATH`에 있어야 합니다. 내장 플러그인과 기존 로고를 `~/plugins/sparekey`에 준비하고 개인 마켓플레이스에 Sparekey 항목만 추가한 뒤 Codex CLI로 설치합니다. 설치·활성화 확인 후 기존 Codex 스킬을 `~/.sparekey-backups`에 백업하고 기존 `SKILL.md`를 제거합니다. 내용이 다른 스킬이나 플러그인은 확인 후 교체하며, 비대화형 설치에서는 `--force`가 필요합니다. 기존 백업은 보존합니다. 설치 후 새 Codex 대화를 시작하세요. 실패하면 기존 스킬을 유지하고 setup에 경고를 표시합니다.
+Codex는 `codex plugin add`를 지원하는 CLI가 `PATH`에 있어야 합니다. 내장 플러그인과 기존 로고를 `~/.codex/plugins/sparekey`에 준비하고 개인 마켓플레이스에 Sparekey 항목만 추가한 뒤 Codex CLI로 설치합니다. 기존 `~/plugins/sparekey` 등록은 다른 항목을 유지하면서 새 경로로 변경합니다. 새 경로의 설치·활성화 확인 후 이전 패키지를 `~/.sparekey-backups`로 옮깁니다. 설치 실패 시 마켓플레이스가 동시에 변경되지 않았다면 이전 등록을 복원합니다. 설치·활성화 확인 후 기존 Codex 스킬을 `~/.sparekey-backups`에 백업하고 기존 `SKILL.md`를 제거합니다. 내용이 다른 스킬이나 플러그인은 확인 후 교체하며, 비대화형 설치에서는 `--force`가 필요합니다. 기존 백업은 보존합니다. 설치 후 새 Codex 대화를 시작하세요. 실패하면 기존 스킬을 유지하고 setup에 경고를 표시합니다.
 
 `doctor`는 플러그인 상태를 검사하며 기존 JSON 키 `codex_skill`을 유지합니다. `uninstall`은 Codex CLI로 플러그인을 제거합니다. Codex를 사용할 수 없으면 경고 후 helper 제거를 계속합니다. 로컬 플러그인 원본, 마켓플레이스 항목, 이전 백업은 재설치·복구용으로 남습니다.
 

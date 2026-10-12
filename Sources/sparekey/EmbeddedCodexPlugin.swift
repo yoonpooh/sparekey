@@ -2,11 +2,11 @@
 import Foundation
 
 enum EmbeddedCodexPlugin {
-    static let version = "0.3.2+codex.a8934344682f0c64"
+    static let version = "0.3.3+codex.72072cc1e04304d8"
     static let manifest = #"""
 {
   "name": "sparekey",
-  "version": "0.3.2+codex.a8934344682f0c64",
+  "version": "0.3.3+codex.72072cc1e04304d8",
   "description": "Unlock your logged-in Mac for authorized GUI tasks and restore the screen lock when the task is done.",
   "author": {
     "name": "yoonpooh",

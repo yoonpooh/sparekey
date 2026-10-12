@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.2</strong>, with bounded waiting for unreadable account labels and specific account-verification errors. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.3</strong>, with a consistent Codex plugin source path and backed-up migration from the old location. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">
@@ -159,7 +159,7 @@ Setup installs a **Codex plugin** through Codex CLI, or a **Claude Code skill** 
 sparekey skill install --agent codex   # or: --agent claude
 ```
 
-Codex requires a CLI version with `codex plugin add` support on `PATH`. Sparekey writes the bundled plugin and original logo to `~/plugins/sparekey`, adds only its entry to the personal marketplace, and installs it through Codex CLI. After confirming installation and activation, it backs up the old standalone Codex skill under `~/.sparekey-backups` and removes its `SKILL.md`. Differing skills or plugin packages require confirmation, or `--force` outside setup; existing backups are preserved. Start a new Codex thread afterward. If installation fails, the old skill stays in place and setup reports a warning.
+Codex requires a CLI version with `codex plugin add` support on `PATH`. Sparekey writes the bundled plugin and original logo to `~/.codex/plugins/sparekey`, adds only its entry to the personal marketplace, and installs it through Codex CLI. Existing `~/plugins/sparekey` registrations are updated in place, preserving other marketplace entries. After confirming installation and activation at the new path, the old package is moved to `~/.sparekey-backups`; a failed install restores the previous marketplace when it has not been concurrently changed. After confirming installation and activation, it backs up the old standalone Codex skill under `~/.sparekey-backups` and removes its `SKILL.md`. Differing skills or plugin packages require confirmation, or `--force` outside setup; existing backups are preserved. Start a new Codex thread afterward. If installation fails, the old skill stays in place and setup reports a warning.
 
 `doctor` reports plugin status while preserving the `codex_skill` JSON key. `uninstall` asks Codex CLI to remove the plugin; if Codex is unavailable, it reports a warning and continues removing the helper. The local plugin source, marketplace entry, and migration backups remain available for reinstall or recovery.
 

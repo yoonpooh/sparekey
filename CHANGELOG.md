@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.3] - 2026-10-12
+
+- Fix the Codex plugin source at `~/.codex/plugins/sparekey`, alongside other personal plugins.
+- Migrate existing `~/plugins/sparekey` registrations without changing other marketplace entries or their order. Verify the new installed path/version and activation before moving the legacy source to a unique backup.
+- Preserve customized destination packages with the existing confirmation and backup flow. Reject symlinked package trees and restore our marketplace update on failed installation without overwriting concurrent changes.
+- Refresh release versions and bundled agent assets. Screen lock, credential, and unlock behavior are unchanged.
+
 ## [0.3.2] - 2026-10-12
 
 - Treat a missing or empty FocusedUser account label as temporary preparation state, using the existing bounded wait and single display recovery before stopping. Never accept an unverified account or broaden name matching.

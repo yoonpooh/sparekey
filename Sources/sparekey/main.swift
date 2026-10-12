@@ -4,7 +4,7 @@ import SparekeyCore
 import AppKit
 
 let help = """
-sparekey 0.3.2 — unlock and relock this user's logged-in Mac
+sparekey 0.3.3 — unlock and relock this user's logged-in Mac
 
 Usage:
   sparekey                  Show help
@@ -46,7 +46,7 @@ if command == .help {
     else { print(help) }
     exit(0)
 }
-if command == .version { print("sparekey 0.3.2"); exit(0) }
+if command == .version { print("sparekey 0.3.3"); exit(0) }
 do {
     guard getuid() != 0, getuid() == geteuid() else { throw SparekeyError("Run as your regular user, without sudo.") }
     switch command {
