@@ -153,11 +153,13 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 ## エージェントスキル
 
-setup は Codex CLI 経由で **Codex プラグイン**を、または `~/.claude/skills/sparekey` に **Claude Code スキル**をインストールします。既存の `--skill codex` オプションはプラグインを選択します。Codex CLI は `PATH` 上にあり、`codex plugin add` に対応している必要があります。インストール確認後に旧スキルをバックアップして削除します。変更済みの内容の置換には確認、または `--force` が必要です。完了後は新しい Codex スレッドを開始してください。後からインストールすることもできます。
+setup は **Codex スキル**を `~/.agents/skills/sparekey/SKILL.md` に、**Claude Code スキル**を `~/.claude/skills/sparekey/SKILL.md` に直接インストールします。新規インストールに Codex CLI は不要です。後からインストールすることもできます:
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
 ```
+
+Sparekey 0.3.0–0.3.3 のプラグインがある場合のみ、Codex CLI で削除を確認してからスキルを書き込みます。該当するマーケットプレイス項目だけを削除し、他の項目、旧ソースとバックアップは保持します。失敗時はスキルを変更せず、問題を解決して再実行します。変更済みスキルは確認または `--force` で `SKILL.md.bak` に保存し、既存のバックアップは上書きしません。新しい Codex スレッドを開始してください。`doctor` はスキルファイルを検査し、`codex_skill` JSON キーを維持します。
 
 スキルはエージェントに次のことを指示します。
 

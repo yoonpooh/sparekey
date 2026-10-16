@@ -2,19 +2,13 @@ import Foundation
 import Darwin
 import SparekeyCore
 
-/// Codex owns plugin installation/configuration; Sparekey supplies the local package.
+/// Compatibility cleanup for plugins installed by Sparekey 0.3.0–0.3.3.
 enum CodexPlugin {
     static var root: String { Skills.home + "/.codex/plugins/sparekey" }
     static var legacyRoot: String { Skills.home + "/plugins/sparekey" }
     static var marketplace: String { Skills.home + "/.agents/plugins/marketplace.json" }
     static let relativeRoot = ".codex/plugins/sparekey"
     static let legacyRelativeRoot = "plugins/sparekey"
-    static var files: [String: Data] {
-        [".codex-plugin/plugin.json": Data(EmbeddedCodexPlugin.manifest.utf8),
-         "skills/sparekey/SKILL.md": Data(EmbeddedSkill.content.utf8),
-         "assets/logo.png": EmbeddedCodexPlugin.logo]
-    }
-
     static func executable() throws -> String {
         let environment = ProcessInfo.processInfo.environment
         #if DEBUG
@@ -84,7 +78,6 @@ enum CodexPlugin {
         var body: [String: Any]
         let name: String
         let registered: Bool
-        let needsMigration: Bool
         let previous: Data?
     }
     static func catalog() throws -> Catalog {
@@ -112,78 +105,8 @@ enum CodexPlugin {
                 throw SparekeyError("The existing Sparekey marketplace entry points elsewhere; no changes made.")
             }
         }
-        let source = matches.first?["source"] as? [String: Any]
         return Catalog(body: body, name: name, registered: !matches.isEmpty,
-                       needsMigration: source?["path"] as? String == "./" + legacyRelativeRoot, previous: previous)
-    }
-
-    /// Return the written bytes so failed installs can restore only our own update.
-    static func register(_ catalog: Catalog) throws -> Data? {
-        if catalog.registered && !catalog.needsMigration { return nil }
-        try Skills.validateDirectory(".agents/plugins", create: true)
-        let current = try Paths.checkedFile(marketplace) ? Data(contentsOf: URL(fileURLWithPath: marketplace)) : nil
-        guard current == catalog.previous else { throw SparekeyError("Codex marketplace changed during installation; retry.") }
-        var body = catalog.body
-        var entries = body["plugins"] as! [[String: Any]]
-        if let index = entries.firstIndex(where: { $0["name"] as? String == "sparekey" }) {
-            var source = entries[index]["source"] as! [String: Any]
-            source["path"] = "./" + relativeRoot
-            entries[index]["source"] = source
-        } else {
-            entries.append(["name": "sparekey", "source": ["source": "local", "path": "./" + relativeRoot],
-                            "policy": ["installation": "AVAILABLE", "authentication": "ON_INSTALL"], "category": "Productivity"])
-        }
-        body["plugins"] = entries
-        let written = try JSONSerialization.data(withJSONObject: body, options: [.prettyPrinted, .sortedKeys])
-        try written.write(to: URL(fileURLWithPath: marketplace), options: .atomic)
-        return written
-    }
-
-    static func restore(_ catalog: Catalog, written: Data?) throws {
-        guard let written else { return }
-        try Skills.validateDirectory(".agents/plugins", create: false)
-        guard try Paths.checkedFile(marketplace), try Data(contentsOf: URL(fileURLWithPath: marketplace)) == written else {
-            throw SparekeyError("Codex marketplace changed after installation; kept the current catalog and both plugin sources.")
-        }
-        if let previous = catalog.previous { try previous.write(to: URL(fileURLWithPath: marketplace), options: .atomic) }
-        else { try FileManager.default.removeItem(atPath: marketplace) }
-    }
-
-    /// Snapshot owned, regular files before migration; never follow a symlink.
-    static func snapshot(_ relative: String) throws -> [String: Data]? {
-        try Skills.validateDirectory(relative, create: false)
-        let path = Skills.home + "/" + relative
-        guard FileManager.default.fileExists(atPath: path) else { return nil }
-        var contents: [String: Data] = [:]
-        func read(_ directory: String, prefix: String) throws {
-            for name in try FileManager.default.contentsOfDirectory(atPath: directory) {
-                let child = directory + "/" + name, key = prefix + name
-                var info = stat()
-                guard lstat(child, &info) == 0, info.st_uid == getuid() else {
-                    throw SparekeyError("Cannot inspect plugin package ownership; no migration performed.")
-                }
-                if info.st_mode & S_IFMT == S_IFDIR {
-                    contents[key + "/"] = Data()
-                    try read(child, prefix: key + "/")
-                } else {
-                    guard try Paths.checkedFile(child) else { throw SparekeyError("Plugin package changed during inspection.") }
-                    contents[key] = try Data(contentsOf: URL(fileURLWithPath: child))
-                }
-            }
-        }
-        try read(path, prefix: "")
-        return contents
-    }
-
-    static func archiveLegacy(_ previous: [String: Data]?) throws {
-        guard let previous else { return }
-        guard try snapshot(legacyRelativeRoot) == previous else {
-            throw SparekeyError("Legacy plugin package changed during installation; it was kept.")
-        }
-        try Skills.validateDirectory(".sparekey-backups", create: true)
-        let destination = Skills.home + "/.sparekey-backups/codex-plugin-legacy-" + UUID().uuidString
-        try FileManager.default.moveItem(atPath: legacyRoot, toPath: destination)
-        Console.row(.info, "Legacy plugin", "moved to " + Console.display(destination))
+                       previous: previous)
     }
 
     static func installed(_ name: String) throws -> [String: Any]? {
@@ -199,118 +122,21 @@ enum CodexPlugin {
         return entry
     }
 
-    static func matches(_ entry: [String: Any]?) -> Bool {
-        guard let entry else { return false }
-        let source = entry["source"] as? [String: Any]
-        return source?["path"] as? String == root && entry["installed"] as? Bool == true && entry["enabled"] as? Bool == true && entry["version"] as? String == EmbeddedCodexPlugin.version
-    }
-
-    static func packageCurrent() throws -> Bool {
-        try Skills.validateDirectory(relativeRoot, create: false)
-        var current = true
-        for (relative, expected) in files {
-            let parent = (relative as NSString).deletingLastPathComponent
-            try Skills.validateDirectory(relativeRoot + "/" + parent, create: false)
-            let path = root + "/" + relative
-            if try !Paths.checkedFile(path) { current = false }
-            else if try Data(contentsOf: URL(fileURLWithPath: path)) != expected { current = false }
-        }
-        return current
-    }
-
-    static func confirmReplacement(_ label: String, force: Bool) throws {
-        if force { return }
-        guard isatty(STDIN_FILENO) == 1 else {
-            throw SparekeyError("Existing \(label) differs. Use --force to back it up and replace it, or run in a TTY.", code: "usage")
-        }
-        guard Console.ask("    Back up and replace the existing \(label)? [y/N] ") == "y" else {
-            throw SparekeyError("Kept the existing \(label); plugin installation cancelled.")
-        }
-    }
-
-    static func backup(_ path: String, label: String) throws {
-        try Skills.validateDirectory(".sparekey-backups", create: true)
-        let destination = Skills.home + "/.sparekey-backups/" + label + "-" + UUID().uuidString
-        try FileManager.default.copyItem(atPath: path, toPath: destination)
-        Console.row(.info, "Backup", Console.display(destination))
-    }
-
-    static func install(force: Bool) throws {
-        _ = try executable()
-        let catalog = try catalog()
-        let before = try installed(catalog.name) // Also preflight CLI plugin support before writing.
-        let current = try packageCurrent()
-        // Preflight both packages before any writes or backups.
-        _ = try snapshot(relativeRoot)
-        let oldSource = before?["source"] as? [String: Any]
-        let migrating = catalog.needsMigration || oldSource?["path"] as? String == legacyRoot
-        let oldPackage = migrating ? try snapshot(legacyRelativeRoot) : nil
-        try Skills.validateFolder("codex", create: false)
-        let legacy = Skills.root("codex") + "/SKILL.md"
-        let previous = try Paths.checkedFile(legacy) ? Data(contentsOf: URL(fileURLWithPath: legacy)) : nil
-        if let previous, previous != Data(EmbeddedSkill.content.utf8) {
-            try confirmReplacement("Codex standalone skill", force: force)
-        }
-        if !current && FileManager.default.fileExists(atPath: root) {
-            try confirmReplacement("Codex plugin package", force: force)
-            try backup(root, label: "codex-plugin")
-        }
-        for (relative, content) in files {
-            let parent = (relative as NSString).deletingLastPathComponent
-            try Skills.validateDirectory(relativeRoot + "/" + parent, create: true)
-            _ = try Paths.checkedFile(root + "/" + relative)
-            try content.write(to: URL(fileURLWithPath: root + "/" + relative), options: .atomic)
-        }
-        let written = try register(catalog)
-        do {
-            if !current || !matches(before) || catalog.needsMigration {
-                let result = try run(["add", "sparekey@" + catalog.name])
-                guard result["pluginId"] as? String == "sparekey@" + catalog.name,
-                      result["version"] as? String == EmbeddedCodexPlugin.version else {
-                    throw SparekeyError("Codex did not confirm the expected Sparekey plugin version; standalone skill kept.")
-                }
-            }
-            guard matches(try installed(catalog.name)) else {
-                throw SparekeyError("Codex plugin is not installed and enabled from the expected path/version; standalone skill kept.")
-            }
-        } catch {
-            try restore(catalog, written: written)
-            throw error
-        }
-        try archiveLegacy(oldPackage)
-        if let previous {
-            try Skills.validateFolder("codex", create: false)
-            guard try Paths.checkedFile(legacy), try Data(contentsOf: URL(fileURLWithPath: legacy)) == previous else {
-                throw SparekeyError("Standalone skill changed during installation; it was kept.")
-            }
-            try backup(Skills.root("codex"), label: "codex-skill")
-            try FileManager.default.removeItem(atPath: legacy)
-            if try FileManager.default.contentsOfDirectory(atPath: Skills.root("codex")).isEmpty {
-                try FileManager.default.removeItem(atPath: Skills.root("codex"))
-            }
-        }
-        Console.row(.ok, "Codex plugin", "installed: sparekey@" + catalog.name,
-                    notes: ["Start a new Codex thread to load the plugin."])
-    }
-
-    static func state() -> DoctorFacts.CodexPlugin {
-        do {
-            let catalog = try catalog()
-            try Skills.validateFolder("codex", create: false)
-            let legacy = try Paths.checkedFile(Skills.root("codex") + "/SKILL.md")
-            if !catalog.registered { return legacy ? .legacy : .missing }
-            guard let entry = try installed(catalog.name) else { return legacy ? .legacy : .missing }
-            if legacy { return .duplicate }
-            if entry["enabled"] as? Bool != true { return .disabled }
-            guard matches(entry) else { return .outdated }
-            return try packageCurrent() ? .current : .outdated
-        } catch { return .unavailable }
-    }
-
     static func removeInstalled() throws {
         let catalog = try catalog()
-        guard catalog.registered, let entry = try installed(catalog.name), entry["installed"] as? Bool == true else { return }
-        _ = try run(["remove", "sparekey@" + catalog.name])
-        guard try installed(catalog.name) == nil else { throw SparekeyError("Codex still reports Sparekey installed.") }
+        guard catalog.registered else { return }
+        if let entry = try installed(catalog.name), entry["installed"] as? Bool == true {
+            _ = try run(["remove", "sparekey@" + catalog.name])
+            guard try installed(catalog.name) == nil else { throw SparekeyError("Codex still reports Sparekey installed; standalone skill was not changed.") }
+        }
+        try Skills.validateDirectory(".agents/plugins", create: false)
+        guard try Paths.checkedFile(marketplace), try Data(contentsOf: URL(fileURLWithPath: marketplace)) == catalog.previous else {
+            throw SparekeyError("Codex marketplace changed during removal; kept the current catalog. Retry skill installation.")
+        }
+        var body = catalog.body
+        body["plugins"] = (body["plugins"] as! [[String: Any]]).filter { $0["name"] as? String != "sparekey" }
+        try JSONSerialization.data(withJSONObject: body, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: marketplace), options: .atomic)
+        Console.row(.ok, "Legacy plugin", "removed; source files and backups kept for recovery")
     }
 }

@@ -153,11 +153,13 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 ## 代理技能
 
-setup 通过 Codex CLI 安装 **Codex 插件**，或在 `~/.claude/skills/sparekey` 安装 **Claude Code 技能**。现有的 `--skill codex` 选项现在安装插件。Codex CLI 必须位于 `PATH` 中并支持 `codex plugin add`。确认安装后备份并移除旧技能。替换已修改的内容需要确认，或使用 `--force`。完成后请开启新的 Codex 对话。也可以之后再安装：
+setup 将 **Codex 技能**直接安装到 `~/.agents/skills/sparekey/SKILL.md`，将 **Claude Code 技能**安装到 `~/.claude/skills/sparekey/SKILL.md`。全新安装不需要 Codex CLI。也可以稍后安装：
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
 ```
+
+仅在迁移 Sparekey 0.3.0–0.3.3 插件时使用 Codex CLI，确认移除后才写入技能。只移除对应的市场条目，保留其他条目、旧插件源文件和备份。失败时不修改技能；解决错误后重试。自定义技能需确认或使用 `--force`，备份为 `SKILL.md.bak`，不会覆盖已有备份。完成后请开启新的 Codex 对话。`doctor` 检查技能文件并保留 `codex_skill` JSON 键。
 
 该技能会要求代理：
 

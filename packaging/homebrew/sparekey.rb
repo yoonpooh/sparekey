@@ -1,7 +1,7 @@
 class Sparekey < Formula
   desc "Unlock and relock the current user's logged-in Mac for authorized agent computer use"
   homepage "https://github.com/yoonpooh/sparekey"
-  url "https://github.com/yoonpooh/sparekey/archive/refs/tags/v0.3.3.tar.gz"
+  url "https://github.com/yoonpooh/sparekey/archive/refs/tags/v0.3.4.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_SHA256"
   license "MIT"
 
@@ -17,12 +17,12 @@ class Sparekey < Formula
       Install Xcode Command Line Tools with Swift 5.9 or newer, then run
       `sparekey setup` locally in an interactive terminal while unlocked.
       Setup signs a stable helper copy and asks which agent integrations to install.
-      Codex uses a plugin and requires Codex CLI on PATH.
+      Codex and Claude Code use standalone skills. Legacy plugin migration requires Codex CLI.
     EOS
   end
 
   test do
-    assert_match "sparekey 0.3.3", shell_output("#{bin}/sparekey --version")
+    assert_match "sparekey 0.3.4", shell_output("#{bin}/sparekey --version")
     assert_match "Usage:", shell_output("#{bin}/sparekey --help")
   end
 end

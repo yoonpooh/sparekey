@@ -31,7 +31,7 @@ enum Doctor {
             facts.helper = .notRunning
         }
         facts.breakerTripped = state?.breakerTripped
-        facts.codexPlugin = CodexPlugin.state()
+        facts.codexSkill = skillFile("codex")
         facts.claudeSkill = skillFile("claude")
         return facts
     }

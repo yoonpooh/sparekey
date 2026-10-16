@@ -153,11 +153,13 @@ Las notas de diseño están en [docs/DESIGN.md](docs/DESIGN.md).
 
 ## Skills de agente
 
-Setup instala un **plugin de Codex** mediante Codex CLI, o una **skill de Claude Code** en `~/.claude/skills/sparekey`. La opción existente `--skill codex` ahora instala el plugin. Codex CLI debe estar en `PATH` y admitir `codex plugin add`. Tras verificar la instalación, se guarda una copia de la skill anterior y se elimina su `SKILL.md`. Reemplazar contenido modificado requiere confirmación o `--force`. Abre una nueva conversación de Codex al terminar. También puedes instalar la integración más tarde:
+Setup instala una **skill de Codex** en `~/.agents/skills/sparekey/SKILL.md` o una **skill de Claude Code** en `~/.claude/skills/sparekey/SKILL.md`. Una instalación nueva no requiere Codex CLI. También puedes instalarlas después:
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
 ```
+
+Solo la migración del plugin de Sparekey 0.3.0–0.3.3 requiere Codex CLI: se verifica su eliminación antes de escribir la skill. Se elimina únicamente su entrada del catálogo, conservando las demás entradas, los archivos originales y las copias de seguridad. Si falla, la skill no cambia; resuelve el error y repite el comando. Las skills modificadas requieren confirmación o `--force` y se guardan en `SKILL.md.bak` sin sobrescribir una copia existente. Abre una nueva conversación de Codex. `doctor` comprueba los archivos de skills y conserva la clave JSON `codex_skill`.
 
 La skill indica al agente que:
 

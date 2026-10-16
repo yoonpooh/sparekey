@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.3</strong>. Codex 플러그인 원본 경로를 통일하고, 이전 경로의 파일을 백업하면서 등록을 옮깁니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.4</strong>. Codex 스킬을 직접 설치하고 이전 플러그인 등록을 제거합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -153,15 +153,13 @@ agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──�
 
 ## 에이전트 스킬
 
-setup에서 Codex CLI를 통해 **Codex 플러그인**을 설치하거나, `~/.claude/skills/sparekey`에 **Claude Code 스킬**을 설치할 수 있습니다. 기존 `--skill codex` 옵션은 이제 플러그인을 설치합니다. 나중에 따로 설치해도 됩니다.
+setup은 **Codex 스킬**을 `~/.agents/skills/sparekey/SKILL.md`에, **Claude Code 스킬**을 `~/.claude/skills/sparekey/SKILL.md`에 직접 설치합니다. 신규 설치에는 Codex CLI가 필요하지 않습니다. 나중에 따로 설치할 수도 있습니다:
 
 ```sh
 sparekey skill install --agent codex   # or: --agent claude
 ```
 
-Codex는 `codex plugin add`를 지원하는 CLI가 `PATH`에 있어야 합니다. 내장 플러그인과 기존 로고를 `~/.codex/plugins/sparekey`에 준비하고 개인 마켓플레이스에 Sparekey 항목만 추가한 뒤 Codex CLI로 설치합니다. 기존 `~/plugins/sparekey` 등록은 다른 항목을 유지하면서 새 경로로 변경합니다. 새 경로의 설치·활성화 확인 후 이전 패키지를 `~/.sparekey-backups`로 옮깁니다. 설치 실패 시 마켓플레이스가 동시에 변경되지 않았다면 이전 등록을 복원합니다. 설치·활성화 확인 후 기존 Codex 스킬을 `~/.sparekey-backups`에 백업하고 기존 `SKILL.md`를 제거합니다. 내용이 다른 스킬이나 플러그인은 확인 후 교체하며, 비대화형 설치에서는 `--force`가 필요합니다. 기존 백업은 보존합니다. 설치 후 새 Codex 대화를 시작하세요. 실패하면 기존 스킬을 유지하고 setup에 경고를 표시합니다.
-
-`doctor`는 플러그인 상태를 검사하며 기존 JSON 키 `codex_skill`을 유지합니다. `uninstall`은 Codex CLI로 플러그인을 제거합니다. Codex를 사용할 수 없으면 경고 후 helper 제거를 계속합니다. 로컬 플러그인 원본, 마켓플레이스 항목, 이전 백업은 재설치·복구용으로 남습니다.
+Sparekey 0.3.0–0.3.3의 플러그인이 남아 있으면 Codex CLI로 제거하고 확인한 뒤 스킬을 설치합니다. 개인 마켓플레이스의 해당 항목만 제거하며 다른 플러그인, 기존 원본 파일과 복구 백업은 보존합니다. 제거 실패 시 스킬을 변경하지 않으므로 오류를 해결하고 명령을 다시 실행하세요. 수정한 스킬은 확인 또는 `--force` 후 `SKILL.md.bak`에 백업하며 기존 백업을 덮어쓰지 않습니다. 설치 후 새 Codex 대화를 시작하세요. `doctor`는 스킬 파일을 검사하고 `codex_skill` JSON 키를 유지합니다. `uninstall`은 내용이 일치하는 스킬만 삭제하고 이전 플러그인 제거를 시도합니다.
 
 스킬은 에이전트에게 다음을 지시합니다.
 

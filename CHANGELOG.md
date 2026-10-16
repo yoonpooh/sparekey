@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.4] - 2026-10-16
+
+- Install Codex and Claude Code as standalone skills using the same file installer. Fresh Codex installs no longer need Codex CLI or marketplace registration.
+- Remove and verify previously registered local Sparekey plugins before writing the Codex skill. Preserve unrelated marketplace entries, original plugin sources, recovery backups, and customized skills.
+- Check skill files directly in `doctor`, preserving the `codex_skill` JSON key. Remove bundled plugin assets and update all installation documentation.
+- Keep lock, unlock, credential, and display behavior unchanged.
+
 ## [0.3.3] - 2026-10-12
 
 - Fix the Codex plugin source at `~/.codex/plugins/sparekey`, alongside other personal plugins.

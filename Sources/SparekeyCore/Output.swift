@@ -100,18 +100,17 @@ public struct DoctorCheck: Equatable {
 public struct DoctorFacts {
     public enum Helper: Equatable { case running(String), notRunning, versionMismatch }
     public enum SkillFile: Equatable { case missing, current, modified, unsafe }
-    public enum CodexPlugin: Equatable { case missing, current, outdated, disabled, unavailable, legacy, duplicate }
     public var installed = false, signed = false, agentLoaded = false
     public var helper = Helper.notRunning
     public var accessibility: Bool?, credentialReadable: Bool?, breakerTripped: Bool?
-    public var codexPlugin = CodexPlugin.missing
+    public var codexSkill = SkillFile.missing
     public var claudeSkill = SkillFile.missing
     public var stablePath = "", uid: UInt32 = 0
     public init() {}
 }
 
 public enum DoctorReport {
-    public static let expectedVersion = "0.3.3"
+    public static let expectedVersion = "0.3.4"
     static let setupHint = "Run 'sparekey setup' in a local terminal."
 
     public static func evaluate(_ facts: DoctorFacts) -> [DoctorCheck] {
@@ -157,19 +156,8 @@ public enum DoctorReport {
         case true?: checks.append(DoctorCheck("breaker", "Circuit breaker", .fail, "tripped; unlocks are paused", hint: ["Rerun 'sparekey setup' locally to clear it."]))
         case nil: checks.append(DoctorCheck("breaker", "Circuit breaker", .skip, "no state yet"))
         }
-        // Keep the JSON check key for consumers of earlier CLI versions.
-        let pluginHint = ["Run 'sparekey skill install --agent codex'; start a new Codex thread afterward."]
-        switch facts.codexPlugin {
-        case .current: checks.append(DoctorCheck("codex_skill", "Codex plugin", .ok, "installed and enabled"))
-        case .missing: checks.append(DoctorCheck("codex_skill", "Codex plugin", .skip, "not installed"))
-        case .outdated: checks.append(DoctorCheck("codex_skill", "Codex plugin", .fail, "differs from this version", hint: pluginHint))
-        case .disabled: checks.append(DoctorCheck("codex_skill", "Codex plugin", .fail, "disabled", hint: pluginHint))
-        case .unavailable: checks.append(DoctorCheck("codex_skill", "Codex plugin", .warn, "could not verify",
-                                                    hint: ["Check Codex CLI availability and the personal marketplace configuration."]))
-        case .legacy: checks.append(DoctorCheck("codex_skill", "Codex plugin", .warn, "standalone skill needs migration", hint: pluginHint))
-        case .duplicate: checks.append(DoctorCheck("codex_skill", "Codex plugin", .warn, "standalone skill also installed", hint: pluginHint))
-        }
-        for (name, title, agent, file) in [("claude_skill", "Claude Code skill", "claude", facts.claudeSkill)] {
+        for (name, title, agent, file) in [("codex_skill", "Codex skill", "codex", facts.codexSkill),
+                                          ("claude_skill", "Claude Code skill", "claude", facts.claudeSkill)] {
             switch file {
             case .current: checks.append(DoctorCheck(name, title, .ok, "installed"))
             case .missing: checks.append(DoctorCheck(name, title, .skip, "not installed"))

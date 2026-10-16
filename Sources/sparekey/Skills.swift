@@ -17,13 +17,13 @@ enum Skills {
         if target == "codex" { return FileManager.default.fileExists(atPath: home + "/.agents") || FileManager.default.fileExists(atPath: home + "/.codex") }
         return FileManager.default.fileExists(atPath: home + "/.claude")
     }
-    static func title(_ target: String) -> String { target == "codex" ? "Codex plugin" : "Claude Code skill" }
+    static func title(_ target: String) -> String { target == "codex" ? "Codex skill" : "Claude Code skill" }
     static func prompt() throws -> [String] {
         guard isatty(STDIN_FILENO) == 1 else { throw SparekeyError("Choose skill targets with --agent or --skill.", code: "usage") }
         let palette = Console.palette
         func state(_ target: String) -> String { palette.dim(detected(target) ? "detected" : "not detected") }
         Console.row(.info, "Agent integration", "let an agent run sparekey for you")
-        Console.line("      1  Codex plugin       " + state("codex"))
+        Console.line("      1  Codex skill        " + state("codex"))
         Console.line("      2  Claude Code skill  " + state("claude"))
         while true {
             guard let line = Console.ask("    Choose 1, 2, or 1,2 (Enter for none): ") else { throw SparekeyError("Skill selection cancelled.", code: "usage") }
@@ -56,27 +56,37 @@ enum Skills {
     }
     enum Outcome { case installed, unchanged, updated, declined }
     static func install(_ target: String, force: Bool) throws -> Outcome {
-        guard target == "claude" else { throw SparekeyError("Standalone skills are only installed for Claude Code.", code: "usage") }
+        guard ["codex", "claude"].contains(target) else { throw SparekeyError("Unknown skill target.", code: "usage") }
         try validateFolder(target, create: false)
         let folder = root(target), file = folder + "/SKILL.md", backup = file + ".bak"
         let new = Data(EmbeddedSkill.content.utf8)
         let current = try Paths.checkedFile(file) ? Data(contentsOf: URL(fileURLWithPath: file)) : nil
+        func migratePlugin() throws {
+            guard target == "codex" else { return }
+            try CodexPlugin.removeInstalled()
+            try validateFolder(target, create: false)
+            let latest = try Paths.checkedFile(file) ? Data(contentsOf: URL(fileURLWithPath: file)) : nil
+            guard latest == current else { throw SparekeyError("Skill changed during plugin removal; kept the current file. Retry installation.") }
+        }
         switch SkillPlan.action(existing: current, new: new) {
-        case .skip: return .unchanged
+        case .skip:
+            try migratePlugin()
+            return .unchanged
         case .create:
+            try migratePlugin()
             try validateFolder(target, create: true)
             try new.write(to: URL(fileURLWithPath: file), options: .atomic)
             return .installed
         case .replace:
             guard try force || confirm(target) else { return .declined }
             guard !(try Paths.checkedFile(backup)) else { throw SparekeyError("Backup already exists at \(backup); refusing overwrite.") }
+            try migratePlugin()
             try FileManager.default.copyItem(atPath: file, toPath: backup)
             try new.write(to: URL(fileURLWithPath: file), options: .atomic)
             return .updated
         }
     }
     static func installAndReport(_ target: String, force: Bool) throws {
-        if target == "codex" { try CodexPlugin.install(force: force); return }
         let folder = Console.display(root(target))
         switch try install(target, force: force) {
         case .installed: Console.row(.ok, title(target), "installed in " + folder)
@@ -84,11 +94,12 @@ enum Skills {
         case .updated: Console.row(.ok, title(target), "updated; previous version saved as SKILL.md.bak")
         case .declined: Console.row(.info, title(target), "kept your existing file")
         }
+        if target == "codex" { Console.line("    Start a new Codex thread to load the skill.") }
     }
     static func removeWritten() throws {
         do { try CodexPlugin.removeInstalled() }
         catch {
-            Console.row(.warn, "Codex plugin", "could not remove; kept plugin files",
+            Console.row(.warn, "Legacy plugin", "could not remove; kept plugin files",
                         notes: [(error as? SparekeyError)?.description ?? error.localizedDescription])
         }
         for target in ["codex", "claude"] {
