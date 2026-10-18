@@ -41,17 +41,25 @@ enum Transport {
             }
         }
     }
-    static func receive(_ fd: Int32, limit: Int = 4096) throws -> Data {
+    static func receive(_ fd: Int32, limit: Int = 4096, timeout: TimeInterval = 20) throws -> Data {
         var frame = LineFrame(limit: limit)
-        let deadline = ProcessInfo.processInfo.systemUptime + 20
-        while ProcessInfo.processInfo.systemUptime < deadline {
-            var byte: UInt8 = 0
-            let count = Darwin.read(fd, &byte, 1)
-            if count < 0 && errno == EINTR { continue }
-            guard count == 1 else { throw SparekeyError("Helper disconnected or timed out.", code: "helper_not_running") }
-            if let result = try frame.append(byte) { return result }
+        let deadline = ProcessInfo.processInfo.systemUptime + timeout
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while true {
+            let remaining = deadline - ProcessInfo.processInfo.systemUptime
+            guard remaining > 0 else { break }
+            var ready = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
+            let polled = poll(&ready, 1, Int32((remaining * 1000).rounded(.up)))
+            if polled < 0 && errno == EINTR { continue }
+            guard polled > 0, ProcessInfo.processInfo.systemUptime < deadline else { break }
+            let count = recv(fd, &buffer, buffer.count, MSG_DONTWAIT)
+            if count < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) { continue }
+            guard count > 0 else { break }
+            for byte in buffer[..<count] {
+                if let result = try frame.append(byte) { return result }
+            }
         }
-        throw SparekeyError("Helper message too large.")
+        throw SparekeyError("Helper disconnected or timed out.", code: "helper_not_running")
     }
     static func request(_ command: String, noCover: Bool = false, lockToken: String? = nil, forceLock: Bool = false) throws -> Reply {
         try Paths.checkedDirectory(Paths.base, create: false)
@@ -64,7 +72,7 @@ enum Transport {
         try verifyPeer(fd)
         try send(Request(command, noCover: noCover, lockToken: lockToken, forceLock: forceLock), to: fd)
         let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))
-        guard reply.v == 1, reply.helperVersion == "0.3.6" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        guard reply.v == 1, reply.helperVersion == "0.3.7" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
         if command == "unlock", reply.error?.code == "usage" {
             throw SparekeyError("The installed helper does not support covered unlocks. Run 'sparekey setup' to update it.", code: "helper_version_mismatch")
         }
@@ -102,7 +110,7 @@ enum Transport {
                 configure(peer, seconds: 20)
                 do {
                     try verifyPeer(peer)
-                    let request = try JSONDecoder().decode(Request.self, from: receive(peer, limit: 256))
+                    let request = try JSONDecoder().decode(Request.self, from: receive(peer, limit: 256, timeout: 2))
                     guard request.isSupportedByCoverHelper,
                           ["status", "probe", "unlock", "lock", "check"].contains(request.command) else {
                         throw SparekeyError("Unsupported helper request.", code: "usage")

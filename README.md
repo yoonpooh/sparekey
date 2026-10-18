@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.6</strong>, with window-count diagnostics and bounded recovery from leftover Force Quit Applications dialogs. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.7</strong>, with bounded helper request waits and buffered socket reads. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">

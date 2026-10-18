@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.3.6</strong>。报告锁屏窗口数量，并有限恢复遗留的强制退出对话框。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.7</strong>。限制辅助进程的请求等待时间，并使用缓冲区读取套接字。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">

@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新リリース: <strong>0.3.6</strong>。ロック画面のウィンドウ数を診断し、残った強制終了ダイアログから限定的に復旧します。<a href="CHANGELOG.md">変更履歴</a>を参照してください。</sub>
+  <sub>最新リリース: <strong>0.3.7</strong>。ヘルパーへのリクエスト待機時間を制限し、ソケットをバッファ単位で読み取ります。<a href="CHANGELOG.md">変更履歴</a>を参照してください。</sub>
 </p>
 
 <p align="center">

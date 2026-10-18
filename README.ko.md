@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.6</strong>. 잠금 화면 창 개수를 진단하고 남아 있는 강제 종료 창을 확인해 복구합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.7</strong>. 헬퍼 요청 대기 시간을 제한하고 소켓 데이터를 묶어서 읽습니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">

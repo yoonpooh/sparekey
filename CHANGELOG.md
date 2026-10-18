@@ -3,6 +3,12 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.7] - 2026-10-18
+
+- Limit inbound helper request frames to two seconds so a stalled connection cannot hold the serial request loop for twenty seconds or longer. The limit ends before screen operations begin.
+- Enforce one monotonic deadline across partial socket reads and interrupted calls. Read into a fixed buffer while preserving newline framing, message size limits, and one request per connection.
+- Add eleven real-socket regression checks, including slow partial input, idle clients, fragmented messages, exact size limits, disconnects, and request/reply round trips.
+
 ## [0.3.6] - 2026-10-18
 
 - Include the observed loginwindow window count in unsupported-layout errors. A leftover Force Quit Applications dialog can otherwise look like an unsupported lock screen.

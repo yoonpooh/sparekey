@@ -8,6 +8,7 @@ let package = Package(
     targets: [
         .target(name: "SparekeyCore"),
         .executableTarget(name: "sparekey", dependencies: ["SparekeyCore"]),
-        .testTarget(name: "SparekeyCoreTests", dependencies: ["SparekeyCore"])
+        .testTarget(name: "SparekeyCoreTests", dependencies: ["SparekeyCore"]),
+        .testTarget(name: "SparekeyTransportTests", dependencies: ["sparekey"])
     ]
 )
