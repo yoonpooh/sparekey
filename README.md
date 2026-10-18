@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.5</strong>, distinguishing ordinary relocks from user takeover so authorized desktop work can continue. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.6</strong>, with window-count diagnostics and bounded recovery from leftover Force Quit Applications dialogs. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">
@@ -242,6 +242,9 @@ launchctl kickstart -k "gui/$(id -u)/io.github.yoonpooh.sparekey.helper"
 The saved password may be wrong, for example after you changed it. Run `sparekey setup --reset-password` locally.
 
 **`login_account_mismatch`, `login_window_unsupported`, or `field_not_ready`**
+
+A leftover **Force Quit Applications** dialog adds another loginwindow window. The error reports the window count. The skill permits identifying that specific dialog from native window metadata, closing only its standard close button, and rerunning probe once. It must not terminate an app, dismiss other dialogs, or bypass account and password-field verification. A failed probe does not mean a password was submitted.
+
 A populated account name mismatch stops immediately. Missing or empty account labels are retried only within the helper's existing preparation budget, with at most one display recovery. Duplicate labels and unsupported roles stop with distinct messages. Check the specific error; an unreadable label is not evidence of another account. `doctor` checks the installation, not the lock-screen layout. Never loop probe or unlock after a failed verification.
 
 **`credential_unavailable` after an upgrade**

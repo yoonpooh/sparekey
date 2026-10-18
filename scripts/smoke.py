@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
         return result
     for args in [[], ['help'], ['--help'], ['-h'], ['help', 'setup'], ['lock', '--help']]:
         assert 'Usage:' in run(args).stdout
-    assert run(['version']).stdout == 'sparekey 0.3.5\n'
+    assert run(['version']).stdout == 'sparekey 0.3.6\n'
     assert run(['--version']).stdout == run(['version']).stdout
     bad = json.loads(run(['unlock', '--json', '--skill', 'codex'], 2).stdout)
     assert bad['error']['code'] == 'usage'
@@ -36,6 +36,10 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
         assert 'If the Mac relocks later in the task, stop and report it.' not in content
         assert 'Never retry a failed unlock' in content
         assert 'unless the user explicitly authorizes resuming desktop work' in content
+        assert 'A failed probe is not a failed unlock' in content
+        assert 'close only that dialog using its standard close button' in content
+        assert 'rerun `sparekey probe --json` once' in content
+        assert 'Never terminate an application or dismiss an authentication or security dialog' in content
         assert content == (Path(__file__).resolve().parents[1] / 'skills/sparekey/SKILL.md').read_text()
         run(['skill', 'install', '--agent', agent])
         skill.write_text('custom skill\n')

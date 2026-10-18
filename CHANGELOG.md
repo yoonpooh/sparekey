@@ -3,6 +3,12 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.6] - 2026-10-18
+
+- Include the observed loginwindow window count in unsupported-layout errors. A leftover Force Quit Applications dialog can otherwise look like an unsupported lock screen.
+- Teach agents to distinguish a failed probe from a failed unlock. After a multi-window probe failure, allow one repair: positively identify the leftover Force Quit Applications dialog from native window metadata, close only that dialog, and rerun probe once before unlocking.
+- Keep the single-window requirement, account and field verification, password handling, and failed-unlock stops unchanged. Unknown, authentication, and security dialogs must not be dismissed automatically.
+
 ## [0.3.5] - 2026-10-18
 
 - Distinguish a later locked screen from confirmed user takeover in the agent skill. Continue authorized desktop work with a fresh probe, one unlock, verification, and a fresh cleanup token; do not reuse expired tokens or loop unlocks when desktop work cannot resume.

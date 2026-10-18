@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.3.5</strong>。区分再次锁屏与用户接管，以继续已授权的桌面任务。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.6</strong>。报告锁屏窗口数量，并有限恢复遗留的强制退出对话框。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">

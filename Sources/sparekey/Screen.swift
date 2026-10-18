@@ -130,8 +130,9 @@ enum Screen {
         }
         let root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.2)
-        guard let windows = try value(root, kAXWindowsAttribute) as? [AXUIElement], windows.count == 1 else {
-            throw SparekeyError("Unsupported login window layout.", code: "login_window_unsupported", transient: true)
+        let windows = try value(root, kAXWindowsAttribute) as? [AXUIElement]
+        guard let windows, windows.count == 1 else {
+            throw SparekeyError("Unsupported login window layout (expected 1 window; found \(windows.map { String($0.count) } ?? "unavailable")). Check for a leftover Force Quit Applications dialog. No password was submitted.", code: "login_window_unsupported", transient: true)
         }
         var elements: [AXUIElement] = [], nodes: [LoginNode] = []
         let deadline = ProcessInfo.processInfo.systemUptime + 3

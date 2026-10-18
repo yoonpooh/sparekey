@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.5</strong>. 단순 재잠금과 사용자 제어권 회수를 구분해 승인된 데스크톱 작업을 이어갑니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.6</strong>. 잠금 화면 창 개수를 진단하고 남아 있는 강제 종료 창을 확인해 복구합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">
@@ -242,6 +242,10 @@ launchctl kickstart -k "gui/$(id -u)/io.github.yoonpooh.sparekey.helper"
 
 **`breaker_tripped` 또는 `unlock_not_confirmed`**
 암호를 바꾼 뒤라면 저장된 암호가 틀렸을 수 있습니다. 로컬에서 `sparekey setup --reset-password`를 실행하세요.
+
+**`login_window_unsupported`와 남아 있는 강제 종료 창**
+
+남아 있는 **응용 프로그램 강제 종료** 창도 loginwindow 창 개수에 포함됩니다. 오류에 창 개수가 표시되면 스킬은 네이티브 창 정보로 해당 대화상자를 확인하고 닫기 버튼만 누른 뒤 probe를 한 번 다시 실행할 수 있습니다. 앱 강제 종료, 다른 대화상자 닫기, 계정·비밀번호 필드 확인 우회는 허용하지 않습니다. probe 실패는 비밀번호 제출 실패가 아닙니다.
 
 **업그레이드 후 `credential_unavailable`**
 `sparekey setup`을 다시 실행하고, 요청하면 암호를 입력하세요.

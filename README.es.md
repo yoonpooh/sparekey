@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.3.5</strong>. Distingue un nuevo bloqueo de la toma de control del usuario para continuar el trabajo autorizado. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.3.6</strong>, con diagnóstico del número de ventanas y recuperación limitada de diálogos de cierre forzado. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">
