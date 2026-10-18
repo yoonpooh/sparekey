@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.3.2</strong>, con espera limitada para etiquetas de cuenta ilegibles y errores específicos de verificación de cuenta. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.3.5</strong>. Distingue un nuevo bloqueo de la toma de control del usuario para continuar el trabajo autorizado. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">

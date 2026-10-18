@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新リリース: <strong>0.3.2</strong>（アカウント表示の読み取り待機と、名前の不一致・画面検証エラーの区別）。詳しくは <a href="CHANGELOG.md">変更履歴</a> をご覧ください。</sub>
+  <sub>最新リリース: <strong>0.3.5</strong>。再ロックとユーザーによる操作の引き継ぎを区別し、許可されたデスクトップ作業を継続します。<a href="CHANGELOG.md">変更履歴</a>を参照してください。</sub>
 </p>
 
 <p align="center">

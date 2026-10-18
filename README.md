@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.4</strong>, with standalone Codex skills and automatic legacy plugin removal. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.5</strong>, distinguishing ordinary relocks from user takeover so authorized desktop work can continue. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">

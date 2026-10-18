@@ -152,10 +152,10 @@ public struct Reply: Codable {
     public let credentialReadable: Bool?
     public let lockToken: String?
     public init(state: String? = nil, message: String, accessibility: Bool? = nil, credentialReadable: Bool? = nil, lockToken: String? = nil) {
-        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.3.4"; self.accessibility = accessibility; self.credentialReadable = credentialReadable; self.lockToken = lockToken
+        v = 1; ok = true; self.state = state; self.message = message; error = nil; helperVersion = "0.3.5"; self.accessibility = accessibility; self.credentialReadable = credentialReadable; self.lockToken = lockToken
     }
     public init(code: String, message: String) {
-        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.3.4"; accessibility = nil; credentialReadable = nil; lockToken = nil
+        v = 1; ok = false; state = nil; self.message = nil; error = ErrorBody(code: code, message: message); helperVersion = "0.3.5"; accessibility = nil; credentialReadable = nil; lockToken = nil
     }
 }
 

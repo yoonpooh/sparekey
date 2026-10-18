@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.4</strong>. Codex 스킬을 직접 설치하고 이전 플러그인 등록을 제거합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.5</strong>. 단순 재잠금과 사용자 제어권 회수를 구분해 승인된 데스크톱 작업을 이어갑니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">

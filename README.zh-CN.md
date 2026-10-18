@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.3.2</strong>，在限定时间内等待尚不可读的账户标签，并区分名称不匹配与锁屏验证错误。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.5</strong>。区分再次锁屏与用户接管，以继续已授权的桌面任务。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">

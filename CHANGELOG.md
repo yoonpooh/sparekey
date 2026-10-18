@@ -3,6 +3,12 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.5] - 2026-10-18
+
+- Distinguish a later locked screen from confirmed user takeover in the agent skill. Continue authorized desktop work with a fresh probe, one unlock, verification, and a fresh cleanup token; do not reuse expired tokens or loop unlocks when desktop work cannot resume.
+- Allow a new desktop request after the agent's cleanup lock. Keep user stop requests, confirmed takeover, failed unlocks, and `relock_revoked` as stop conditions; explicit user reauthorization can resume access after takeover or revoked authority.
+- Add installed-skill regression checks for both Codex and Claude Code. Helper lock/unlock behavior and credential handling are unchanged.
+
 ## [0.3.4] - 2026-10-16
 
 - Install Codex and Claude Code as standalone skills using the same file installer. Fresh Codex installs no longer need Codex CLI or marketplace registration.
