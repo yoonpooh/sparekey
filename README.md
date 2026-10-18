@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Latest release: <strong>0.3.7</strong>, with bounded helper request waits and buffered socket reads. See the <a href="CHANGELOG.md">changelog</a>.</sub>
+  <sub>Latest release: <strong>0.3.8</strong>, with a subtle cover-title shimmer that respects Reduce Motion. See the <a href="CHANGELOG.md">changelog</a>.</sub>
 </p>
 
 <p align="center">
@@ -276,6 +276,12 @@ This removes the saved credential, helper, LaunchAgent, runtime files, and the s
 - the `sparekey local signing` identity (delete it in Keychain Access if you want);
 - the Accessibility entry (remove it in System Settings);
 - the `~/.local/bin/sparekey` link.
+
+## Development evidence
+
+Run the standalone [shimmer renderer](scripts/render-shimmer/README.md) to render the
+production cover artwork without showing a window or operating the helper. It
+supports still images and 12-second, 30 fps frame sequences for H.264 encoding.
 
 ## Credits
 

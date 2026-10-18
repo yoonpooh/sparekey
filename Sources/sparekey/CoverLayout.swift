@@ -3,6 +3,8 @@ import AppKit
 enum CoverLayout {
     static let buttonSize = NSSize(width: 154, height: 44)
     static let logoSize = NSSize(width: 144, height: 73)
+    private static let title = "Your agent is using this Mac"
+    private static let titleFont = NSFont.systemFont(ofSize: 26, weight: .semibold)
 
     static func buttonFrame(in frame: NSRect) -> NSRect {
         let groupHeight: CGFloat = logoSize.height + 32 + 32 + 10 + 20 + 40 + buttonSize.height
@@ -11,7 +13,17 @@ enum CoverLayout {
                       width: buttonSize.width, height: buttonSize.height)
     }
 
-    static func drawArtwork(in bounds: NSRect) {
+    static func titleFrame(in bounds: NSRect) -> NSRect {
+        let titleY = buttonFrame(in: bounds).maxY + 40 + 20 + 10
+        let width = min(bounds.width - 40, ceil((title as NSString).size(withAttributes: [.font: titleFont]).width) + 4)
+        return NSRect(x: bounds.midX - width / 2, y: titleY, width: width, height: 32)
+    }
+
+    static func drawTitle(in rect: NSRect, color: NSColor) {
+        drawText(title, in: rect, font: titleFont, color: color)
+    }
+
+    static func drawArtwork(in bounds: NSRect, titleColor: NSColor = .white) {
         NSColor.black.setFill()
         bounds.fill()
         let button = buttonFrame(in: bounds)
@@ -19,8 +31,7 @@ enum CoverLayout {
         let titleY = subtitleY + 20 + 10
         let logo = NSRect(x: bounds.midX - logoSize.width / 2, y: titleY + 32 + 32, width: logoSize.width, height: logoSize.height)
         EmbeddedLogo.image.draw(in: logo, from: .zero, operation: .sourceOver, fraction: 1)
-        drawText("Your agent is using this Mac", in: NSRect(x: 20, y: titleY, width: bounds.width - 40, height: 32),
-                 font: .systemFont(ofSize: 26, weight: .semibold), color: .white)
+        drawTitle(in: titleFrame(in: bounds), color: titleColor)
         drawText("The screen is hidden while it works.", in: NSRect(x: 20, y: subtitleY, width: bounds.width - 40, height: 20),
                  font: .systemFont(ofSize: 15), color: NSColor.white.withAlphaComponent(0.55))
     }
@@ -48,10 +59,6 @@ enum CoverLayout {
                      from: .zero, operation: .sourceOver, fraction: 1)
         text.draw(at: NSPoint(x: x + symbolSize + gap, y: (bounds.height - textSize.height) / 2), withAttributes: attributes)
     }
-}
-
-final class CoverArtworkView: NSView {
-    override func draw(_ dirtyRect: NSRect) { CoverLayout.drawArtwork(in: bounds) }
 }
 
 final class CoverUnlockButtonView: NSView {

@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>最新版本：<strong>0.3.7</strong>。限制辅助进程的请求等待时间，并使用缓冲区读取套接字。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
+  <sub>最新版本：<strong>0.3.8</strong>。为遮罩标题添加柔和的流光效果，并遵循“减弱动态效果”设置。详见<a href="CHANGELOG.md">更新日志</a>。</sub>
 </p>
 
 <p align="center">

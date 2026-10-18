@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>Última versión: <strong>0.3.7</strong>, con tiempos de espera limitados para solicitudes al helper y lectura del socket por bloques. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
+  <sub>Última versión: <strong>0.3.8</strong>, con un brillo sutil en el título de la cubierta que respeta Reducir movimiento. Consulta el <a href="CHANGELOG.md">registro de cambios</a>.</sub>
 </p>
 
 <p align="center">

@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.8] - 2026-10-19
+
+- Add a subtle left-to-right shimmer to the existing cover title using a masked Core Animation gradient with a 5.5-second cycle. No frame timer or display link is added.
+- Respect Reduce Motion at startup and when accessibility display settings change. Stop the animation when the artwork is hidden or detached.
+- Preserve cover input passthrough, Unlock Mac authentication, the 60-minute display hold, and existing relock authority.
+- Add seven shimmer checks and a standalone offscreen evidence renderer for still frames and 30 fps video frames.
+
 ## [0.3.7] - 2026-10-18
 
 - Limit inbound helper request frames to two seconds so a stalled connection cannot hold the serial request loop for twenty seconds or longer. The limit ends before screen operations begin.

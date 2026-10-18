@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <sub>최신 릴리스: <strong>0.3.7</strong>. 헬퍼 요청 대기 시간을 제한하고 소켓 데이터를 묶어서 읽습니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
+  <sub>최신 릴리스: <strong>0.3.8</strong>. 커버 제목에 은은한 shimmer를 추가하고 동작 줄이기 설정을 반영합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
 </p>
 
 <p align="center">

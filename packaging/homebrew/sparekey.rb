@@ -1,7 +1,7 @@
 class Sparekey < Formula
   desc "Unlock and relock the current user's logged-in Mac for authorized agent computer use"
   homepage "https://github.com/yoonpooh/sparekey"
-  url "https://github.com/yoonpooh/sparekey/archive/refs/tags/v0.3.7.tar.gz"
+  url "https://github.com/yoonpooh/sparekey/archive/refs/tags/v0.3.8.tar.gz"
   sha256 "REPLACE_WITH_RELEASE_SHA256"
   license "MIT"
 
@@ -22,7 +22,7 @@ class Sparekey < Formula
   end
 
   test do
-    assert_match "sparekey 0.3.7", shell_output("#{bin}/sparekey --version")
+    assert_match "sparekey 0.3.8", shell_output("#{bin}/sparekey --version")
     assert_match "Usage:", shell_output("#{bin}/sparekey --help")
   end
 end
