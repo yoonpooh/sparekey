@@ -1,91 +1,43 @@
-<p align="center">
-  <img src="docs/assets/logo.png" alt="Sparekey logo" width="140">
-</p>
+# Sparekey
 
-<h1 align="center">Sparekey</h1>
+A macOS CLI that lets an AI agent unlock your logged-in session and relock it after a task.
 
-<p align="center">
-  <strong>A spare key to your Mac, for your AI agent.</strong><br>
-  Unlock the screen, get the work done, lock it again.
-</p>
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/macOS-13%2B-black.svg" alt="macOS 13+">
-  <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
-</p>
+English · [한국어](README.ko.md) · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
 
-<p align="center">
-  English · <a href="README.ko.md">한국어</a> · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
-</p>
+![Sparekey cover on a Mac display](docs/assets/cover.png)
 
-<p align="center">
-  <sub>Latest release: <strong>0.3.8</strong>, with a subtle cover-title shimmer that respects Reduce Motion. See the <a href="CHANGELOG.md">changelog</a>.</sub>
-</p>
+## Features
 
-<p align="center">
-  <img src="docs/assets/cover.png" alt="Sparekey screen cover on a Mac display" width="720">
-</p>
+- Unlocks your own logged-in session with a password stored in your login Keychain.
+- Verifies the console account and lock-screen password field before submitting the password at most once per attempt.
+- Covers physical displays by default while allowing agent input and screen capture underneath.
+- Keeps the display awake for up to 60 minutes, ending the hold on relock or authenticated takeover.
+- Returns a task token for relocking, with revocation when the user takes control.
+- Includes standalone skills for Codex and Claude Code, and JSON output for scripts.
 
-## Why Sparekey
+Sparekey depends on the lock screen's Accessibility layout. The package targets macOS 13 and later; that deployment target does not establish runtime compatibility with every macOS release.
 
-Computer-use and browser-use agents stall the moment your Mac locks. You either leave the Mac unlocked for hours or come back to a task that never ran.
+## Requirements
 
-Sparekey is a small macOS CLI that lets an agent unlock **your own, already logged-in** session with a password you saved locally, finish its task, and restore the lock. While the agent works, a black cover hides the physical displays from people nearby.
+- macOS 13 or later with your own desktop session already logged in.
+- Xcode Command Line Tools with Swift 5.9 or later to build from source, including the Homebrew formula's source build.
+- A local interactive terminal on the unlocked Mac for setup and uninstall. Run as your regular user, without `sudo`.
+- Accessibility permission for the installed helper and access to your login Keychain.
+- Homebrew if you use the Homebrew installation method.
 
-```sh
-sparekey unlock --json                   # save the returned lockToken
-sparekey lock --lock-token TOKEN --json  # restore the lock with that token
-```
+An Apple Developer account is not required. Sparekey cannot unlock FileVault at startup, log in a logged-out user, or unlock another account. It does not provide remote access.
 
-With the bundled agent skill, you don't have to mention any of this. Ask for an ordinary GUI task on a locked Mac, and the agent checks the lock, unlocks, does the work, and locks the screen again on its own.
+## Installation
 
-### What it is not
-
-Sparekey is not a password bypass, recovery tool, or remote-access service. It cannot unlock FileVault at startup, a logged-out session, another user's account, or a sleeping Mac that is unreachable.
-
-> [!WARNING]
-> **Status: early (0.3.1).** Sparekey works on macOS 27.2 on Apple silicon, where two unprompted agent runs unlocked, worked, and relocked successfully. Other macOS versions are untested. It depends on the lock screen's Accessibility layout, not a public unlock API.
-
-## Quick start
-
-You need macOS 13 or later with a logged-in desktop session, Xcode Command Line Tools with Swift 5.9 or newer, and a local terminal on the Mac for the one-time setup. No Apple Developer account is needed.
-
-**1. Install** with Homebrew (builds from source on your Mac):
+With Homebrew:
 
 ```sh
 brew install yoonpooh/tap/sparekey
 ```
 
-**2. Set up** in a local terminal while the Mac is unlocked, not over SSH:
-
-```sh
-sparekey setup --skill codex   # or: --skill claude, --skill claude,codex, --no-skill
-```
-
-When macOS asks to use the signing key, click **Allow**, not **Always Allow**. When setup asks for your login password, type it at the hidden prompt.
-
-**3. Use it.** Ask your agent for a GUI task, or run it yourself:
-
-```sh
-sparekey status   # locked or unlocked
-sparekey doctor   # check the install
-```
-
-**Or ask your agent.** Paste this into Codex, Claude Code, or another agent. It installs Sparekey and hands you only the setup step, because the password prompt needs your own terminal:
-
-```text
-Install Sparekey on this Mac: https://github.com/yoonpooh/sparekey
-1. Run `brew install yoonpooh/tap/sparekey`.
-2. Setup asks for my login password, so don't run `sparekey setup` yourself.
-   Tell me the exact command to run in my own terminal, with the --skill
-   option for the agent you are, and wait until I say it's done.
-3. Run `sparekey doctor` and report the result.
-Never ask me for the password.
-```
-
-<details>
-<summary><strong>Build from source instead</strong></summary>
+Or build from this repository:
 
 ```sh
 git clone https://github.com/yoonpooh/sparekey.git
@@ -94,199 +46,153 @@ swift build -c release
 .build/release/sparekey setup --skill codex
 ```
 
-Then put `sparekey` on your `PATH`:
+Setup installs a signed helper at `~/Library/Application Support/sparekey/bin/sparekey`.
+For a source installation, add that binary's directory to your `PATH`, or create a link in a directory already on your `PATH`:
 
 ```sh
-ln -s "$HOME/Library/Application Support/sparekey/bin/sparekey" ~/.local/bin/sparekey
-sparekey doctor
+mkdir -p "$HOME/.local/bin"
+ln -s "$HOME/Library/Application Support/sparekey/bin/sparekey" "$HOME/.local/bin/sparekey"
 ```
 
-</details>
+The link command requires that its destination does not already exist. Ensure `~/.local/bin` is on your shell's `PATH` before using `sparekey` by name.
 
-<details>
-<summary><strong>What setup does</strong></summary>
+The [Homebrew formula in this repository](packaging/homebrew/sparekey.rb) is a packaging template with a placeholder release checksum. Do not install that local file as a release formula.
 
-1. Creates a `sparekey local signing` identity in your login Keychain (first run only).
-2. Signs and installs the helper at `~/Library/Application Support/sparekey/bin/sparekey`.
-   - When macOS asks to use the signing key, click **Allow**, not **Always Allow**.
-3. Asks for your login password twice. Input is hidden and checked against macOS.
-   - Never paste it into chat, a command argument, or an environment variable.
-4. Starts the background helper and installs the agent skill you chose.
-5. Helps you turn on **Accessibility** for the helper. It opens the settings pane, shows the file in Finder, and copies its path, then checks again after you enable it.
+## Quick start
 
-</details>
+For a Homebrew installation, run setup in your own local terminal while the Mac is unlocked:
 
-### Upgrading
+```sh
+sparekey setup --skill codex
+```
 
-After `brew upgrade sparekey` or rebuilding, run `sparekey setup` again. Until you do, the new CLI reports `helper_version_mismatch`. Setup refreshes the signed helper without asking for the password, unless the helper can no longer read it.
+Choose `--skill claude`, `--skill claude,codex`, or `--no-skill` as appropriate. Without either selection option, setup asks which skills to install.
+Setup creates or reuses a local signing identity, signs the helper, saves the login password when needed, and starts a per-user LaunchAgent.
+Enter your password only at the hidden terminal prompts. If macOS asks to use the signing key, choose **Allow**, not **Always Allow**.
+Follow setup's instructions to enable Accessibility for the helper.
 
-## Features
+Check the installation and current state:
 
-- **Verified unlock and lock.** `unlock` submits the password once and confirms the new state; `lock` verifies the lock, releases the display hold, and turns off the displays.
-- **Screen cover.** Inspired by Codex's Locked Computer Use. A black cover with the Sparekey logo, “Your agent is using this Mac,” and an **Unlock Mac** button hides the physical displays while the agent works.
-  - It appears beneath the lock screen **before** password submission, so the desktop never flashes.
-  - Screenshots and screen recordings exclude it, so the agent still sees the real screen, and its clicks and typing pass through.
-  - Click **Unlock Mac** and authenticate in the macOS dialog to reveal the screen and take control. Cancelling keeps the cover. `sparekey lock` or any relock removes the cover.
-  - `sparekey unlock --no-cover` skips it. The cover hides the screen but does not lock it.
-- **Stays awake.** After a confirmed unlock, the display stays awake until `sparekey lock`, any other relock, or 60 minutes, so idle sleep does not relock the Mac mid-task.
-- **Lock-screen recovery.** If an awake locked screen shows only the wallpaper and clock instead of your account, Sparekey performs one display sleep→wake cycle to bring the account back. It never types into an unverified screen.
-- **Fails closed.** One password submission at most, a 30-second limiter, and a circuit breaker after an unconfirmed unlock.
-- **Agent skills** for Codex and Claude Code, plus `--json` output for scripts.
+```sh
+sparekey doctor
+sparekey status --json
+```
+
+The installed skill guides the agent through status, probe, unlock, and cleanup. Start a new agent conversation after installing or updating a skill.
+For a manual task on a locked Mac:
+
+```sh
+sparekey probe --json
+sparekey unlock --json
+```
+
+Check each result before continuing. `probe` wakes the display and verifies the login field without reading or submitting the password. A wake during the password grace period can return `state: "unlocked"` with a `lockToken`; in that case, retain that token and skip `unlock`.
+Otherwise, a successful unlock can return the token. Keep it private and use the returned value for task cleanup:
+
+```sh
+sparekey lock --lock-token "$TASK_LOCK_TOKEN" --json
+```
+
+`TASK_LOCK_TOKEN` above is a placeholder shell variable for the returned token, not a setting read by Sparekey. Do not relock a session you found already unlocked unless this task has valid relock authority.
+On `relock_revoked`, leave the Mac as it is. Never use `--force` to bypass task cleanup restrictions.
+
+## Configuration
+
+Configuration uses CLI options rather than a user configuration file. See the [CLI reference](docs/CLI.md) for all public commands and options.
+
+| Item | Location or option |
+| --- | --- |
+| Signed helper | `~/Library/Application Support/sparekey/bin/sparekey` |
+| LaunchAgent | `~/Library/LaunchAgents/io.github.yoonpooh.sparekey.helper.plist` |
+| Runtime socket | `~/Library/Application Support/sparekey/run/control.sock` |
+| Safety state | `~/Library/Application Support/sparekey/state.json` |
+| Codex skill | `~/.agents/skills/sparekey/SKILL.md` |
+| Claude Code skill | `~/.claude/skills/sparekey/SKILL.md` |
+| Existing signing identity | `setup --identity NAME` |
+| Replace saved password | `setup --reset-password` |
+| Disable the default cover for one unlock | `unlock --no-cover` |
+
+Install a skill later with `sparekey skill install --agent codex` or `--agent claude`.
+Customized skills require confirmation or `--force`; replacement creates `SKILL.md.bak` and refuses to overwrite an existing backup.
+Migration of a legacy Sparekey plugin requires Codex CLI and verifies removal before writing the standalone skill. Fresh installations do not require Codex CLI.
+
+### Upgrade and uninstall
+
+After `brew upgrade sparekey` or rebuilding the binary, run `sparekey setup` locally to refresh the signed helper and skills. Setup reuses the saved credential when it remains readable.
+
+Run `sparekey uninstall` from a local interactive terminal to remove the helper, saved credential, LaunchAgent, runtime files, and matching Sparekey-written skills.
+It keeps the signing identity, the Accessibility entry, customized skills, and any link you created in `~/.local/bin`. Remove those separately if needed. A Homebrew-installed CLI also remains until you remove its formula.
+
+## CLI reference
+
+```sh
+sparekey --help
+sparekey help unlock
+sparekey --version
+```
+
+The [CLI reference](docs/CLI.md) lists exact command syntax, accepted options, JSON fields, exit codes, and relock rules. Running `sparekey` without arguments shows help.
 
 ## How it works
 
-```text
-agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──▶ helper (LaunchAgent)
-                                                                     │
-                     verifies console user, Apple-signed loginwindow,│
-                     your account, and a single secure password field│
-                                                                     ▼
-                         login Keychain ──▶ one submission ──▶ state check
-```
+The CLI sends requests over a private Unix socket to a signed helper running as your user through launchd. Both ends check the peer's user ID.
+The helper checks the console session, Apple-signed `loginwindow`, account label, and secure password field before reading the saved password from the login Keychain.
+It submits at most once per attempt. A persistent 30-second limiter and a circuit breaker restrict further attempts after an unconfirmed submission.
 
-- `setup` copies the binary to a fixed location, signs it with a local code-signing identity, and runs it as a per-user background helper.
-- The password lives in your login Keychain. Only that signed helper is allowed to read it.
-- The helper fills only a verified password field, submits **at most once**, and fails closed on anything unexpected: other accounts, dialogs, recovery screens, or layout changes.
-- A persistent 30-second limiter and a circuit breaker stop a stale password from piling up failed logins.
+The default cover is placed beneath the lock screen before password submission. **Unlock Mac** requires fresh macOS authentication to reveal the display and revoke task relock authority.
+Tokens also expire when the hold ends, a system lock event occurs, or the helper restarts. The 60-minute limit ends the display hold; it is not a scheduled lock command.
 
-Design notes are in [docs/DESIGN.md](docs/DESIGN.md).
+See [design notes](docs/DESIGN.md) and the [agent skill](skills/sparekey/SKILL.md) for implementation details and the agent workflow.
 
-## Agent integration
+## Security notes
 
-Setup installs a standalone **Codex skill** at `~/.agents/skills/sparekey/SKILL.md`, or a **Claude Code skill** at `~/.claude/skills/sparekey/SKILL.md`. Fresh installs do not require Codex CLI. You can also install either skill later:
+Read the [security policy](SECURITY.md) before installation.
 
-```sh
-sparekey skill install --agent codex   # or: --agent claude
-```
+- Any process running as your user can ask the helper to unlock. Use a trusted personal account.
+- The cover hides physical displays; it does not lock the Mac or prevent blind physical input. Screen captures omit it.
+- Sparekey listens on a local socket, not the network. It cannot protect against malware already running as you.
+- Never put a login password in chat, command arguments, environment variables, or documentation. Keep task tokens out of logs and saved reports.
+- Do not loop failed unlocks or bypass account and field verification. Report vulnerabilities privately as described in the security policy.
 
-When migrating a plugin installed by Sparekey 0.3.0–0.3.3, the installer uses Codex CLI to remove it and verifies removal before writing the skill. It removes only the matching personal marketplace entry; other entries, plugin source files, and recovery backups are preserved. If removal fails, the skill is not changed; resolve the error and rerun the command. Customized skills require confirmation or `--force`, and are saved as `SKILL.md.bak` without overwriting an existing backup. Start a new Codex thread afterward. `doctor` checks skill files and keeps the `codex_skill` JSON key. `uninstall` removes only matching skill content and attempts legacy plugin cleanup.
+## Troubleshooting
 
-The skill tells the agent to:
+Start with `sparekey doctor`. It checks installation and permissions, not whether the current lock-screen layout can be unlocked.
 
-- check the lock state before GUI work, or as soon as app or window access fails;
-- unlock once, verify it, and do the task;
-- relock afterwards, but only if it was the one that unlocked the Mac, even when the task fails;
-- stop and report errors instead of retrying.
-
-Asking for GUI work counts as permission to unlock for that task. Tell the agent if you want the Mac left locked or left unlocked.
-
-### Pre-authorize it in your agent instructions
-
-In multi-agent setups, an orchestrator may tell its workers to leave the lock alone, or an agent may stop to ask first. To avoid that, add this to your `CLAUDE.md`, `AGENTS.md`, or orchestrator system prompt:
-
-```text
-Screen lock: I pre-authorize unlocking this Mac with the sparekey skill
-for any task that needs the screen. Use it without asking, and never
-restrict this when delegating to other agents.
-```
-
-Without it, the skill still unlocks for the GUI tasks you ask for. The line keeps that permission from being dropped or questioned along the way.
-
-## Commands
-
-| Command | What it does |
+| Result | Action |
 | --- | --- |
-| `sparekey unlock [--no-cover]` | Unlock once, confirm the state, cover the physical displays by default, and keep the display awake until `lock` or 60 minutes |
-| `sparekey lock --lock-token TOKEN` / `lock --force` | Lock and turn off displays; task cleanup requires its token, manual locking uses `--force` |
-| `sparekey status` | Print `locked` or `unlocked` |
-| `sparekey probe` | Wake the display and check the password field without reading the password |
-| `sparekey setup` | Install or refresh the helper, credential, and skills. Options: `--skill`, `--no-skill`, `--reset-password`, `--identity NAME` |
-| `sparekey doctor` | Check the install, signature, helper, Accessibility, credential, and skills |
-| `sparekey skill install` | Install the agent skill. Options: `--agent claude\|codex`, `--force` |
-| `sparekey uninstall` | Remove the helper, credential, LaunchAgent, and Sparekey-written skills |
-| `sparekey help [command]` | Show help |
-| `sparekey version` | Print the version |
+| `not_set_up`, `helper_not_running`, `helper_version_mismatch` | Run `sparekey setup` in a local terminal. |
+| `accessibility_missing` | Enable the installed helper under System Settings > Privacy & Security > Accessibility, then rerun setup. |
+| `credential_unavailable` | Rerun setup locally and enter the password if prompted. |
+| `breaker_tripped`, `unlock_not_confirmed` | Stop attempts. If the saved password is stale, run `sparekey setup --reset-password` locally. |
+| `rate_limited` | Attempts are limited to one per 30 seconds. Do not retry in a loop. |
+| `login_account_mismatch` | Stop. The visible account label does not match the current user. |
+| `login_window_unsupported`, `field_not_ready` | Inspect the specific error and lock-screen state. Do not type into an unverified field. |
+| `relock_revoked` | Leave the current state unchanged. Do not fall back to `lock --force`. |
+| `display_sleep_not_confirmed` | Locking may have succeeded even though display sleep was not confirmed. Read `status` before deciding what to do next. |
 
-Running `sparekey` with no arguments shows help; it never unlocks.
+A leftover Force Quit Applications dialog can make the loginwindow layout unsupported. The [agent skill](skills/sparekey/SKILL.md) describes the narrowly scoped dialog recovery. A failed probe does not mean a password was submitted.
 
-<details>
-<summary><strong>JSON output, exit codes, and error codes</strong></summary>
+## Development
 
-`unlock`, `lock`, `status`, `probe`, and `doctor` accept `--json`:
-
-```json
-{"ok":true,"command":"status","state":"locked","message":"locked"}
-{"ok":false,"command":"unlock","error":{"code":"rate_limited","message":"..."}}
-```
-
-Exit codes: `0` success, `1` operational failure, `2` usage error. A successful `status` can report either state, so check `state`.
-
-Error codes: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_account_mismatch`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json` can also report `skill_outdated`, and adds a per-check `statuses` map (`ok`, `warn`, `fail`, `skip`).
-
-</details>
-
-## FAQ and troubleshooting
-
-Start with `sparekey doctor`. Every failing row shows how to fix it.
-
-**Does the cover lock my Mac?**
-No. It hides the screen but does not lock it. Click **Unlock Mac** and authenticate to take control. For an explicit manual lock, run `sparekey lock --force` to lock and turn off the displays.
-
-**Why don't I see the cover in the agent's screenshots?**
-That is by design. Screenshots and screen recordings exclude the cover, so the agent sees the real screen.
-
-**The lock screen shows only the wallpaper and clock.**
-Sparekey performs one display sleep→wake cycle to bring the account back. It never types into an unverified screen.
-
-**`helper_version_mismatch`**
-The CLI was upgraded or rebuilt, but the helper was not. Run `sparekey setup` again.
-
-**Accessibility missing**
-Enable `~/Library/Application Support/sparekey/bin/sparekey` in System Settings → Privacy & Security → Accessibility. If you just enabled it, run `setup` again or restart the helper:
+From the repository root:
 
 ```sh
-launchctl kickstart -k "gui/$(id -u)/io.github.yoonpooh.sparekey.helper"
+swift build
+swift test
+swift build -c release
+python3 scripts/embed-agent-assets.py --check
 ```
 
-**`breaker_tripped` or `unlock_not_confirmed`**
-The saved password may be wrong, for example after you changed it. Run `sparekey setup --reset-password` locally.
+`Package.swift` defines the `sparekey` executable, `SparekeyCore` library target, and core and transport test targets.
+The embedded asset check detects drift between the agent skill and its generated Swift file.
 
-**`login_account_mismatch`, `login_window_unsupported`, or `field_not_ready`**
+Additional tools have their own instructions:
 
-A leftover **Force Quit Applications** dialog adds another loginwindow window. The error reports the window count. The skill permits identifying that specific dialog from native window metadata, closing only its standard close button, and rerunning probe once. It must not terminate an app, dismiss other dialogs, or bypass account and password-field verification. A failed probe does not mean a password was submitted.
+- [Shimmer renderer](scripts/render-shimmer/README.md) produces offscreen artwork and animation frames without operating the helper.
+- [Local signing spike](scripts/spike/README.md) tests signing, Accessibility, and Keychain behavior. It changes local Keychain and LaunchAgent state, so run it only deliberately.
 
-A populated account name mismatch stops immediately. Missing or empty account labels are retried only within the helper's existing preparation budget, with at most one display recovery. Duplicate labels and unsupported roles stop with distinct messages. Check the specific error; an unreadable label is not evidence of another account. `doctor` checks the installation, not the lock-screen layout. Never loop probe or unlock after a failed verification.
-
-**`credential_unavailable` after an upgrade**
-Run `sparekey setup` again and enter the password when asked.
-
-**`rate_limited`**
-An attempt ran in the last 30 seconds. Don't loop on it.
-
-## Security
-
-Please read [SECURITY.md](SECURITY.md) before installing. In short:
-
-- **Any process running as your user can ask the helper to unlock.** Sparekey is for a trusted personal account. It does not protect you from malware that is already running as you.
-- The default cover hides the physical displays during agent work. Screenshots omit the cover, and the agent can still operate apps underneath it.
-- The helper uses the hardened runtime and listens only on a private local socket, never on the network.
-- The signing key cannot be exported and no app is pre-trusted to use it. Clicking **Always Allow** would change that.
-- Never paste your login password into chat, a command argument, or an environment variable. Enter it only at setup's hidden prompt.
-
-Report vulnerabilities privately through GitHub's security advisories.
-
-## Uninstall
-
-```sh
-sparekey uninstall
-```
-
-This removes the saved credential, helper, LaunchAgent, runtime files, and the skill files Sparekey wrote. It does not remove:
-
-- the `sparekey local signing` identity (delete it in Keychain Access if you want);
-- the Accessibility entry (remove it in System Settings);
-- the `~/.local/bin/sparekey` link.
-
-## Development evidence
-
-Run the standalone [shimmer renderer](scripts/render-shimmer/README.md) to render the
-production cover artwork without showing a window or operating the helper. It
-supports still images and 12-second, 30 fps frame sequences for H.264 encoding.
-
-## Credits
-
-The lock-screen interaction approach was informed by Cindy's [MacScreenUnlock.swift](https://github.com/makecindy/cindy/blob/main/packages/remote-credentials-native/Sources/CindyRemoteCredentials/MacScreenUnlock.swift) (Apache-2.0). Sparekey is an independent implementation.
+See the [changelog](CHANGELOG.md) for release history. The lock-screen interaction approach was informed by [Cindy](https://github.com/makecindy/cindy); Sparekey is an independent implementation.
 
 ## License
 
-[MIT](LICENSE) © yoonpooh
+[MIT](LICENSE), copyright yoonpooh.

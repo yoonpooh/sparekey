@@ -1,91 +1,40 @@
-<p align="center">
-  <img src="docs/assets/logo.png" alt="Sparekey logo" width="140">
-</p>
+# Sparekey
 
-<h1 align="center">Sparekey</h1>
+AI エージェントがログイン済みの自分の Mac をロック解除し、作業後に再ロックするための macOS CLI です。
 
-<p align="center">
-  <strong>AI エージェントに預ける、Mac の合鍵。</strong><br>
-  ロックを解除して、作業を終えたら、またロックする。
-</p>
+[![MIT ライセンス](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/macOS-13%2B-black.svg" alt="macOS 13+">
-  <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
-</p>
+[English](README.md) · [한국어](README.ko.md) · 日本語 · [简体中文](README.zh-CN.md) · [Español](README.es.md)
 
-<p align="center">
-  <a href="README.md">English</a> · <a href="README.ko.md">한국어</a> · 日本語 · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
-</p>
+![Mac ディスプレイの Sparekey カバー](docs/assets/cover.png)
 
-<p align="center">
-  <sub>最新リリース: <strong>0.3.8</strong>。カバーのタイトルに控えめなシマーを追加し、「視差効果を減らす」設定に対応します。<a href="CHANGELOG.md">変更履歴</a>を参照してください。</sub>
-</p>
+## 主な機能
 
-<p align="center">
-  <img src="docs/assets/cover.png" alt="Mac のディスプレイに表示された Sparekey の画面カバー" width="720">
-</p>
+- ログインキーチェーンのパスワードで自分のセッションをロック解除します。
+- コンソールアカウントと安全なパスワード欄を検証し、試行ごとに最大 1 回だけ送信します。
+- デフォルトのカバーで物理ディスプレイを隠します。エージェントは下のアプリを操作・キャプチャできます。
+- 最大 60 分間ディスプレイのスリープを抑止し、再ロックや認証済みの引き継ぎで解除します。
+- タスク用の再ロックトークン、Codex と Claude Code のスキル、JSON 出力を提供します。
 
-## Sparekey が必要な理由
+ロック画面の Accessibility レイアウトに依存します。macOS 13 以降というパッケージの配布対象は、すべての OS バージョンでの動作保証ではありません。
 
-コンピュータやブラウザを操作するエージェントは、Mac がロックされた瞬間に止まってしまいます。何時間も Mac をロック解除したまま放置するか、戻ってきて作業がまったく進んでいないことに気づくか、どちらかになりがちです。
+## 必要なもの
 
-Sparekey は、ローカルに保存したパスワードを使って、エージェントが**自分自身の、すでにログイン済みの**セッションのロックを解除し、作業を終えたら再びロックできるようにする小さな macOS CLI です。エージェントの作業中は黒いカバーが物理ディスプレイを覆い、周りの人から画面を隠します。
+- macOS 13 以降と、ログイン済みの自分のデスクトップセッション。
+- ソースビルド用の Swift 5.9 以降を含む Xcode Command Line Tools。Homebrew formula もソースをビルドします。
+- ロック解除済みの Mac のローカル対話型ターミナル。setup と uninstall は通常のユーザーで、`sudo` を使わずに実行します。
+- インストールした helper のアクセシビリティ権限と、ログインキーチェーンへのアクセス。
+- Homebrew でインストールする場合は Homebrew。
 
-```sh
-sparekey unlock --json                   # save the returned lockToken
-sparekey lock --lock-token TOKEN --json  # restore the lock with that token
-```
+Apple Developer アカウントは不要です。起動時の FileVault、ログアウト済みのセッション、別のアカウントは解除できません。リモートアクセス機能もありません。
 
-付属のエージェントスキルを入れておけば、この手順をいちいち指示する必要はありません。ロック中の Mac でふつうの GUI 作業を頼むだけで、エージェントがロック状態を確認し、解除して作業し、最後に自分で画面をロックし直します。
-
-### できないこと
-
-Sparekey はパスワード回避ツールでも、復旧ツールでも、リモートアクセスサービスでもありません。起動時の FileVault、ログアウトしたセッション、別のユーザーのアカウント、アクセスできないスリープ中の Mac は解除できません。
-
-> [!WARNING]
-> **状況: 初期段階（0.3.1）。** Apple silicon 搭載の macOS 27.2 で動作し、特に指示を与えずに実行したエージェントが、ロック解除・作業・再ロックを 2 回とも成功させています。ほかの macOS バージョンは未検証です。公開されたロック解除 API ではなく、ロック画面の Accessibility レイアウトに依存しています。
-
-## クイックスタート
-
-必要なもの: macOS 13 以降とログイン済みのデスクトップセッション、Swift 5.9 以降を含む Xcode Command Line Tools、初回セットアップ用の Mac 上のローカルターミナル。Apple Developer アカウントは不要です。
-
-**1. インストール** — Homebrew を使います（Mac 上でソースからビルドされます）。
+## インストール
 
 ```sh
 brew install yoonpooh/tap/sparekey
 ```
 
-**2. セットアップ** — Mac のロックを解除した状態で、SSH ではなくローカルターミナルから実行します。
-
-```sh
-sparekey setup --skill codex   # or: --skill claude, --skill claude,codex, --no-skill
-```
-
-macOS から署名鍵の使用を求められたら、**Always Allow** ではなく **Allow** をクリックしてください。ログインパスワードは、入力内容が表示されないプロンプトに直接入力します。
-
-**3. 使う** — エージェントに GUI 作業を頼むか、自分で実行してみましょう。
-
-```sh
-sparekey status   # locked or unlocked
-sparekey doctor   # check the install
-```
-
-**エージェントに任せる。** Codex や Claude Code などのエージェントに次の文を貼り付けてください。エージェントがインストールを済ませ、パスワード入力が必要な setup の手順だけをあなたに渡します。パスワードは自分のターミナルで入力する必要があるためです。
-
-```text
-Install Sparekey on this Mac: https://github.com/yoonpooh/sparekey
-1. Run `brew install yoonpooh/tap/sparekey`.
-2. Setup asks for my login password, so don't run `sparekey setup` yourself.
-   Tell me the exact command to run in my own terminal, with the --skill
-   option for the agent you are, and wait until I say it's done.
-3. Run `sparekey doctor` and report the result.
-Never ask me for the password.
-```
-
-<details>
-<summary><strong>ソースからビルドする場合</strong></summary>
+ソースからビルドする場合は次を実行します。
 
 ```sh
 git clone https://github.com/yoonpooh/sparekey.git
@@ -94,189 +43,122 @@ swift build -c release
 .build/release/sparekey setup --skill codex
 ```
 
-続いて `sparekey` を `PATH` に追加します。
+ソース版の `PATH` 設定は[英語のインストール手順](README.md#installation)を参照してください。
+リポジトリ内の formula はチェックサムが未設定のテンプレートなので、そのファイルを直接リリース用 formula としてインストールしないでください。
+
+## クイックスタートと使い方
+
+Homebrew でのインストール後、自分の Mac のローカルターミナルで設定します。
 
 ```sh
-ln -s "$HOME/Library/Application Support/sparekey/bin/sparekey" ~/.local/bin/sparekey
-sparekey doctor
+sparekey setup --skill codex
 ```
 
-</details>
+`--skill claude`、`--skill claude,codex`、`--no-skill` も選べます。選択を省略すると対話形式で尋ねます。
+setup はローカル署名 ID を作成または再利用し、helper に署名して、必要に応じてパスワードを保存し、ユーザー別 LaunchAgent を起動します。
+パスワードは非表示の入力欄にだけ入力してください。署名鍵の確認では **Always Allow** ではなく **Allow** を選び、helper のアクセシビリティ設定に従ってください。
 
-<details>
-<summary><strong>setup が行うこと</strong></summary>
+```sh
+sparekey doctor
+sparekey status --json
+```
 
-1. ログインキーチェーンに `sparekey local signing` ID を作成します（初回のみ）。
-2. helper に署名し、`~/Library/Application Support/sparekey/bin/sparekey` にインストールします。
-   - macOS から署名鍵の使用を求められたら、**Always Allow** ではなく **Allow** をクリックしてください。
-3. ログインパスワードを 2 回尋ねます。入力は表示されず、macOS で照合されます。
-   - パスワードをチャット、コマンド引数、環境変数に貼り付けないでください。
-4. バックグラウンドの helper を起動し、選んだエージェントスキルをインストールします。
-5. helper の **Accessibility** を有効にする手順を案内します。設定パネルを開き、Finder でファイルを表示し、パスをコピーしてから、有効化後にもう一度確認します。
+スキルのインストールや更新後は新しいエージェントの会話を開始してください。スキルが状態確認、probe、解除、終了時の処理を案内します。
+手動でロック中の Mac を使う場合は、各コマンドの結果を確認してから進みます。
 
-</details>
+```sh
+sparekey probe --json
+sparekey unlock --json
+```
 
-### アップグレード
+`probe` は画面を起こしてパスワード欄を確認しますが、パスワードを読み取りも送信もしません。
+パスワード猶予期間中の復帰で `unlocked` と `lockToken` が返った場合、そのトークンを保持し `unlock` を省略します。
+それ以外は成功した `unlock` のトークンを保持します。終了時にはタスクが受け取った値を使います。
 
-`brew upgrade sparekey` やリビルドの後は、`sparekey setup` を再実行してください。それまでは新しい CLI が `helper_version_mismatch` を返します。helper がパスワードを読めなくなっていない限り、setup はパスワードを尋ねずに署名済み helper だけを更新します。
+```sh
+sparekey lock --lock-token "$TASK_LOCK_TOKEN" --json
+```
 
-## 主な機能
+`TASK_LOCK_TOKEN` は返されたトークンを格納する例示用のシェル変数で、Sparekey の設定ではありません。
+最初から解除済みのセッションに新しい再ロック権限は付与されません。`relock_revoked` では状態を維持し、終了処理で `--force` を使わないでください。
 
-- **確認つきのロック解除とロック。** `unlock` はパスワードを 1 回だけ送信し、状態を確認します。`lock` はロックを確認してから画面のスリープ抑止を解除し、画面を消します。
-- **画面カバー。** Codex の Locked Computer Use に着想を得た機能です。Sparekey のロゴ、「Your agent is using this Mac」、**Unlock Mac** ボタンを表示する黒いカバーが、エージェントの作業中に物理ディスプレイを覆います。
-  - パスワード送信の**前に**ロック画面の下へ敷かれるので、デスクトップが一瞬でも見えることはありません。
-  - スクリーンショットや画面収録には写らないため、エージェントは実際の画面を見られ、クリックやキー入力もそのまま下のアプリに届きます。
-  - **Unlock Mac** をクリックし、macOS のダイアログで認証すると画面が表示されます。キャンセルするとカバーは残ります。認証成功でタスクの再ロック権限は無効になります。
-  - `sparekey unlock --no-cover` でカバーなしにできます。カバーは画面を隠すだけで、Mac をロックするものではありません。
-- **スリープを防止。** ロック解除を確認した後は、`sparekey lock`、ほかの方法による再ロック、または 60 分経過のいずれかまでディスプレイをスリープさせません。作業中にアイドルスリープで再ロックされるのを防ぎます。
-- **ロック画面の復旧。** 点灯中のロック画面にアカウントではなく壁紙と時計しか表示されない場合、ディスプレイのスリープ→復帰を 1 回行ってアカウントを呼び戻します。確認できていない画面に入力することは決してありません。
-- **異常時は止まる。** パスワード送信は最大 1 回、30 秒の試行制限、ロック解除を確認できなければサーキットブレーカーが作動します。
-- Codex と Claude Code 向けの**エージェントスキル**、スクリプト向けの `--json` 出力。
+## 設定
+
+ユーザー設定ファイルではなく CLI オプションで設定します。全パスは[英語の設定一覧](README.md#configuration)を参照してください。
+
+- helper は `~/Library/Application Support/sparekey/bin/sparekey` にあります。
+- Codex スキルは `~/.agents/skills/sparekey/SKILL.md`、Claude Code スキルは `~/.claude/skills/sparekey/SKILL.md` にあります。
+- `setup --identity NAME` で既存の署名 ID を、`setup --reset-password` で保存パスワードの更新を指定します。
+- `unlock --no-cover` はその解除時のカバーを省略します。
+- `sparekey skill install --agent codex` または `--agent claude` で後からスキルを追加できます。
+
+変更済みスキルは確認または `skill install --force` で置き換え、`SKILL.md.bak` に保存します。既存バックアップは上書きしません。
+旧 Sparekey プラグインからの移行時のみ Codex CLI が必要です。削除を確認してからスキルを書き込みます。
+
+アップグレードや再ビルド後はローカルで `sparekey setup` を実行し、helper とスキルを更新します。読み取り可能な保存パスワードは再利用します。
+ローカル対話型ターミナルで `sparekey uninstall` を実行すると、管理対象のインストールと内容が一致するスキルを削除します。
+署名 ID、アクセシビリティ項目、変更済みスキル、自分で作ったリンク、Homebrew の CLI は別途削除します。
+
+## CLI リファレンス
+
+```sh
+sparekey --help
+sparekey help unlock
+sparekey --version
+```
+
+公開コマンドの構文、オプション、JSON、終了コードは [CLI リファレンス](docs/CLI.md)にまとめています。引数なしではヘルプを表示します。
+`--json` は `unlock`、`lock`、`status`、`probe`、`doctor` で使用できます。終了コードは成功 `0`、処理失敗 `1`、使用法の誤り `2` です。
 
 ## 仕組み
 
-```text
-agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──▶ helper (LaunchAgent)
-                                                                     │
-                     verifies console user, Apple-signed loginwindow,│
-                     your account, and a single secure password field│
-                                                                     ▼
-                         login Keychain ──▶ one submission ──▶ state check
-```
+CLI はプライベートな Unix ソケットで署名済み helper に要求を送り、双方が相手のユーザー ID を確認します。
+helper はコンソールセッション、Apple 署名の `loginwindow`、アカウント表示、パスワード欄を検証してからキーチェーンを読み取ります。
+30 秒の試行制限と、送信後に解除を確認できない場合のサーキットブレーカーがあります。
 
-- `setup` はバイナリを決まった場所にコピーし、ローカルのコード署名 ID で署名して、ユーザーごとのバックグラウンド helper として実行します。
-- パスワードはログインキーチェーンに保存され、読み取れるのは署名済みのその helper だけです。
-- helper は確認済みのパスワード欄にだけ入力し、送信は**最大 1 回**です。別のアカウント、ダイアログ、復旧画面、レイアウトの変化など、想定外の状況では安全側に倒して中止します。
-- 永続的な 30 秒の試行制限とサーキットブレーカーが、古いパスワードによるログイン失敗の積み重ねを防ぎます。
-
-設計メモは [docs/DESIGN.md](docs/DESIGN.md) にあります。
-
-## エージェントスキル
-
-setup は **Codex スキル**を `~/.agents/skills/sparekey/SKILL.md` に、**Claude Code スキル**を `~/.claude/skills/sparekey/SKILL.md` に直接インストールします。新規インストールに Codex CLI は不要です。後からインストールすることもできます:
-
-```sh
-sparekey skill install --agent codex   # or: --agent claude
-```
-
-Sparekey 0.3.0–0.3.3 のプラグインがある場合のみ、Codex CLI で削除を確認してからスキルを書き込みます。該当するマーケットプレイス項目だけを削除し、他の項目、旧ソースとバックアップは保持します。失敗時はスキルを変更せず、問題を解決して再実行します。変更済みスキルは確認または `--force` で `SKILL.md.bak` に保存し、既存のバックアップは上書きしません。新しい Codex スレッドを開始してください。`doctor` はスキルファイルを検査し、`codex_skill` JSON キーを維持します。
-
-スキルはエージェントに次のことを指示します。
-
-- GUI 作業の前に、またはアプリやウィンドウへのアクセスに失敗したらすぐに、ロック状態を確認する
-- ロック解除は 1 回だけ行い、解除を確認してから作業する
-- タスクが失敗しても、自分でロックを解除した場合に限り、終了後に再ロックする
-- リトライせずに止まり、エラーを報告する
-
-GUI 作業を頼むことは、そのタスクに限ってロック解除を許可したものとみなされます。作業後に Mac をロックしたままにしたい、または解除したままにしたい場合は、エージェントに伝えてください。
-
-### エージェントの指示であらかじめ許可する
-
-複数のエージェントで作業を分担する構成では、オーケストレーターが配下のエージェントにロックに触れないよう指示したり、エージェントが確認を求めて止まったりすることがあります。これを避けるには、`CLAUDE.md`、`AGENTS.md`、またはオーケストレーターのシステムプロンプトに次の文を追加してください。
-
-```text
-Screen lock: I pre-authorize unlocking this Mac with the sparekey skill
-for any task that needs the screen. Use it without asking, and never
-restrict this when delegating to other agents.
-```
-
-この文がなくても、GUI 作業を頼めばスキルはロックを解除します。この文は、その許可が途中で外されたり、改めて確認されたりするのを防ぎます。
-
-## コマンド
-
-| コマンド | 内容 |
-| --- | --- |
-| `sparekey unlock [--no-cover]` | 1 回だけロックを解除して状態を確認します。デフォルトで物理ディスプレイを覆い、`lock` か 60 分経過までディスプレイをスリープさせません |
-| `sparekey lock --lock-token TOKEN` / `lock --force` | ロックして画面を消します。タスク終了にはトークン、手動ロックには `--force` を使います |
-| `sparekey status` | `locked` または `unlocked` を出力します |
-| `sparekey probe` | パスワードを読まずにディスプレイを起こし、パスワード欄を確認します |
-| `sparekey setup` | helper、認証情報、スキルをインストールまたは更新します。オプション: `--skill`、`--no-skill`、`--reset-password`、`--identity NAME` |
-| `sparekey doctor` | インストール、署名、helper、Accessibility、認証情報、スキルを点検します |
-| `sparekey skill install` | エージェントスキルをインストールします。オプション: `--agent claude\|codex`、`--force` |
-| `sparekey uninstall` | helper、認証情報、LaunchAgent、Sparekey が書き込んだスキルを削除します |
-| `sparekey help [command]` | ヘルプを表示します |
-| `sparekey version` | バージョンを出力します |
-
-引数なしで `sparekey` を実行するとヘルプが表示されます。ロックが解除されることはありません。
-
-<details>
-<summary><strong>JSON 出力、終了コード、エラーコード</strong></summary>
-
-`unlock`、`lock`、`status`、`probe`、`doctor` は `--json` に対応しています。
-
-```json
-{"ok":true,"command":"status","state":"locked","message":"locked"}
-{"ok":false,"command":"unlock","error":{"code":"rate_limited","message":"..."}}
-```
-
-終了コード: `0` 成功、`1` 処理の失敗、`2` 使い方の誤り。`status` はどちらの状態を返しても成功扱いなので、`state` を確認してください。
-
-エラーコード: `usage`、`not_set_up`、`helper_not_running`、`helper_version_mismatch`、`no_console_session`、`accessibility_missing`、`credential_unavailable`、`login_account_mismatch`、`login_window_unsupported`、`field_not_ready`、`cover_unavailable`、`rate_limited`、`breaker_tripped`、`unlock_not_confirmed`、`lock_not_confirmed`、`internal`。`doctor --json` は `skill_outdated` を返すこともあり、チェックごとの `statuses` マップ（`ok`、`warn`、`fail`、`skip`）も含みます。
-
-`login_account_mismatch` は読み取った名前が現在のユーザー名と完全に一致しない場合に返します。読み取れない表示は制限時間内で待機し、準備できなければ `field_not_ready` で停止します。`doctor` の成功はロック画面の検証を意味しません。
-
-</details>
-
-## FAQ とトラブルシューティング
-
-まず `sparekey doctor` を実行してください。失敗した項目ごとに対処法が表示されます。
-
-**カバーは Mac をロックしますか？**
-いいえ。画面を隠すだけで、ロックはしません。自分で操作するには **Unlock Mac** をクリックして認証してください。手動でロックして画面を消すには `sparekey lock --force` を実行してください。
-
-**エージェントのスクリーンショットにカバーが写っていません。**
-仕様どおりです。スクリーンショットや画面収録からはカバーが除外されるので、エージェントは実際の画面を見ています。
-
-**ロック画面に壁紙と時計しか表示されません。**
-Sparekey がディスプレイのスリープ→復帰を 1 回行ってアカウントを呼び戻します。確認できていない画面に入力することは決してありません。
-
-**`helper_version_mismatch`**
-CLI はアップグレードまたはリビルドされたものの、helper が古いままです。`sparekey setup` を再実行してください。
-
-**Accessibility が許可されていない**
-システム設定 → プライバシーとセキュリティ → アクセシビリティで `~/Library/Application Support/sparekey/bin/sparekey` を有効にしてください。有効にした直後なら、`setup` を再実行するか helper を再起動します。
-
-```sh
-launchctl kickstart -k "gui/$(id -u)/io.github.yoonpooh.sparekey.helper"
-```
-
-**`breaker_tripped` または `unlock_not_confirmed`**
-パスワードを変更した後などは、保存済みのパスワードが違っている可能性があります。ローカルで `sparekey setup --reset-password` を実行してください。
-
-**アップグレード後の `credential_unavailable`**
-`sparekey setup` を再実行し、求められたらパスワードを入力してください。
-
-**`rate_limited`**
-直近 30 秒以内に試行がありました。繰り返し実行しないでください。
+カバーは送信前にロック画面の下に置かれます。**Unlock Mac** で macOS 認証を完了すると画面を表示し、タスクの再ロック権限を無効にします。
+システムのロックイベント、画面維持の終了、helper の再起動でもトークンは失効します。60 分は画面維持の上限であり、自動ロック予約ではありません。
+[設計メモ](docs/DESIGN.md)と[エージェントスキル](skills/sparekey/SKILL.md)に詳細があります。
 
 ## セキュリティ
 
-インストールの前に [SECURITY.md](SECURITY.md) をお読みください。要点は次のとおりです。
+インストール前に[セキュリティポリシー](SECURITY.md)を読んでください。
 
-- **自分のユーザー権限で動くプロセスなら、どれでも helper にロック解除を依頼できます。** Sparekey は信頼できる個人アカウント向けのツールです。すでに自分の権限で動いているマルウェアからは守れません。
-- デフォルトのカバーは、エージェントの作業中に物理ディスプレイを覆います。スクリーンショットにはカバーが写らず、エージェントはその下のアプリを操作し続けられます。
-- helper は Hardened Runtime を使い、ネットワークではなくプライベートなローカルソケットでのみ待ち受けます。
-- 署名鍵は書き出せず、あらかじめ使用を許可されたアプリもありません。**Always Allow** をクリックすると、この状態が変わってしまいます。
-- ログインパスワードをチャット、コマンド引数、環境変数に貼り付けないでください。入力するのは setup の非表示プロンプトだけです。
+- 同じユーザー権限のすべてのプロセスが解除を要求できます。信頼できる個人アカウント向けです。
+- カバーはロックではなく、画面を見ずに行う物理入力も防ぎません。キャプチャには含まれません。
+- helper はネットワークではなくローカルソケットを使います。同じユーザー権限のマルウェアは防げません。
+- パスワードをチャット、引数、環境変数、文書に入れないでください。トークンもログや報告に残さないでください。
+- 失敗した解除のループや検証の回避は行わず、脆弱性はポリシーに従って非公開で報告してください。
 
-脆弱性は GitHub のセキュリティアドバイザリから非公開で報告してください。
+## トラブルシューティング
 
-## アンインストール
+まず `sparekey doctor` を確認します。成功しても、実際のロック画面や解除成功を検証したことにはなりません。
+
+- `not_set_up`、`helper_not_running`、`helper_version_mismatch` はローカルで `sparekey setup` を実行します。
+- `accessibility_missing` はシステム設定 > プライバシーとセキュリティ > アクセシビリティで helper を許可し、setup を再実行します。
+- `credential_unavailable` は setup を再実行します。保存パスワードが古い場合は `sparekey setup --reset-password` を使います。
+- `breaker_tripped`、`unlock_not_confirmed`、`rate_limited` では試行を繰り返さず、原因を確認します。
+- アカウントや入力欄の検証エラーでは未検証の欄に入力しません。`relock_revoked` では状態を変えません。
+- `display_sleep_not_confirmed` でもロック済みの可能性があります。次の操作前に `status` を確認します。
+
+残った「アプリケーションの強制終了」ウィンドウの限定的な復旧方法は[スキル](skills/sparekey/SKILL.md)を参照してください。probe の失敗はパスワード送信を意味しません。
+
+## 開発
+
+リポジトリルートで実行します。
 
 ```sh
-sparekey uninstall
+swift build
+swift test
+swift build -c release
+python3 scripts/embed-agent-assets.py --check
 ```
 
-保存された認証情報、helper、LaunchAgent、ランタイムファイル、Sparekey が書き込んだスキルファイルを削除します。次のものは削除されません。
-
-- `sparekey local signing` ID（必要ならキーチェーンアクセスで削除してください）
-- Accessibility の項目（システム設定で削除してください）
-- `~/.local/bin/sparekey` のリンク
-
-## クレジット
-
-ロック画面の操作方法は、Cindy の [MacScreenUnlock.swift](https://github.com/makecindy/cindy/blob/main/packages/remote-credentials-native/Sources/CindyRemoteCredentials/MacScreenUnlock.swift)（Apache-2.0）を参考にしました。Sparekey は独自の実装です。
+`Package.swift` は実行ファイル、`SparekeyCore`、core と transport のテストを定義します。エセット検査はスキルと生成 Swift の一致を確認します。
+[Shimmer レンダラー](scripts/render-shimmer/README.md)は helper を操作せず画像を生成します。
+[ローカル署名実験](scripts/spike/README.md)は Keychain と LaunchAgent を変更するため、意図して実行してください。
+[変更履歴](CHANGELOG.md)も参照してください。ロック画面へのアクセス方法は [Cindy](https://github.com/makecindy/cindy)を参考にした独立実装です。
 
 ## ライセンス
 
-[MIT](LICENSE) © yoonpooh
+[MIT](LICENSE)、著作権者 yoonpooh。

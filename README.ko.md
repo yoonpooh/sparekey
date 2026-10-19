@@ -1,91 +1,42 @@
-<p align="center">
-  <img src="docs/assets/logo.png" alt="Sparekey logo" width="140">
-</p>
+# Sparekey
 
-<h1 align="center">Sparekey</h1>
+AI 에이전트가 로그인된 본인 Mac 세션의 잠금을 풀고 작업 후 다시 잠그도록 돕는 macOS CLI입니다.
 
-<p align="center">
-  <strong>AI 에이전트에게 맡기는 Mac의 예비 열쇠.</strong><br>
-  화면 잠금을 풀고, 작업을 끝내고, 다시 잠급니다.
-</p>
+[![MIT 라이선스](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/macOS-13%2B-black.svg" alt="macOS 13+">
-  <img src="https://img.shields.io/badge/Swift-5.9%2B-orange.svg" alt="Swift 5.9+">
-</p>
+[English](README.md) · 한국어 · [日本語](README.ja.md) · [简体中文](README.zh-CN.md) · [Español](README.es.md)
 
-<p align="center">
-  <a href="README.md">English</a> · 한국어 · <a href="README.ja.md">日本語</a> · <a href="README.zh-CN.md">简体中文</a> · <a href="README.es.md">Español</a>
-</p>
+![Mac 디스플레이의 Sparekey 가림막](docs/assets/cover.png)
 
-<p align="center">
-  <sub>최신 릴리스: <strong>0.3.8</strong>. 커버 제목에 은은한 shimmer를 추가하고 동작 줄이기 설정을 반영합니다. 자세한 내용은 <a href="CHANGELOG.md">변경 기록</a>을 참고하세요.</sub>
-</p>
+## 주요 기능
 
-<p align="center">
-  <img src="docs/assets/cover.png" alt="Mac 디스플레이에 표시된 Sparekey 화면 가림막" width="720">
-</p>
+- 로그인 Keychain에 저장한 암호로 본인의 로그인된 세션을 잠금 해제합니다.
+- 콘솔 계정과 보안 암호 입력란을 확인하고 시도당 최대 한 번만 암호를 제출합니다.
+- 기본 가림막으로 실제 디스플레이를 가립니다. 에이전트는 가림막 아래 앱을 조작하고 화면을 캡처할 수 있습니다.
+- 최대 60분 동안 화면 잠자기를 억제합니다. 재잠금이나 인증된 사용자 인계 시 유지가 끝납니다.
+- 작업별 재잠금 토큰, Codex·Claude Code 스킬, JSON 출력을 제공합니다.
 
-## 왜 Sparekey인가
+잠금 화면의 Accessibility 레이아웃에 의존합니다. 패키지의 macOS 13 이상 배포 대상 설정이 모든 macOS 버전에서의 실제 동작을 보장하지는 않습니다.
 
-컴퓨터와 브라우저를 조작하는 에이전트는 Mac이 잠기는 순간 멈춥니다. 몇 시간씩 Mac을 잠금 해제한 채로 두거나, 돌아와서 작업이 하나도 진행되지 않은 것을 확인하게 됩니다.
+## 요구 사항
 
-Sparekey는 로컬에 저장한 암호로 에이전트가 **본인의, 이미 로그인된** 세션의 잠금을 풀고, 작업을 마친 뒤 다시 잠그게 해 주는 작은 macOS CLI입니다. 에이전트가 일하는 동안에는 검은 가림막이 실제 디스플레이를 가려 주변 사람이 화면을 볼 수 없습니다.
+- macOS 13 이상과 이미 로그인된 본인의 데스크톱 세션.
+- 소스 빌드용 Swift 5.9 이상의 Xcode Command Line Tools. Homebrew formula도 소스에서 빌드합니다.
+- 잠금 해제된 Mac의 로컬 대화형 터미널. setup과 uninstall은 일반 사용자로 실행하며 `sudo`를 사용하지 않습니다.
+- 설치된 helper의 손쉬운 사용 권한과 로그인 Keychain 접근.
+- Homebrew 방식으로 설치한다면 Homebrew.
 
-```sh
-sparekey unlock --json                   # save the returned lockToken
-sparekey lock --lock-token TOKEN --json  # restore the lock with that token
-```
+Apple Developer 계정은 필요 없습니다. 시동 시 FileVault 잠금, 로그아웃된 세션, 다른 계정은 열 수 없으며 원격 접속 기능도 제공하지 않습니다.
 
-함께 제공되는 에이전트 스킬을 설치하면 이 과정을 따로 지시할 필요가 없습니다. 잠긴 Mac에서 평범한 GUI 작업을 부탁하면, 에이전트가 알아서 잠금 상태를 확인하고, 잠금을 풀고, 작업한 다음, 화면을 다시 잠급니다.
+## 설치
 
-### 할 수 없는 일
-
-Sparekey는 암호 우회 도구도, 복구 도구도, 원격 접속 서비스도 아닙니다. 시동 시 FileVault 잠금, 로그아웃된 세션, 다른 사용자 계정, 접근할 수 없는 잠자기 상태의 Mac은 잠금 해제할 수 없습니다.
-
-> [!WARNING]
-> **상태: 초기 단계(0.3.1).** Apple silicon의 macOS 27.2에서 동작하며, 별도 지시 없이 실행한 에이전트가 잠금 해제, 작업, 재잠금을 두 차례 모두 성공했습니다. 다른 macOS 버전은 시험하지 않았습니다. 공개된 잠금 해제 API가 아니라 잠금 화면의 Accessibility 레이아웃에 의존합니다.
-
-## 빠른 시작
-
-macOS 13 이상과 로그인된 데스크톱 세션, Swift 5.9 이상이 포함된 Xcode Command Line Tools, 그리고 최초 설정에 쓸 Mac의 로컬 터미널이 필요합니다. Apple Developer 계정은 필요 없습니다.
-
-**1. 설치** — Homebrew로 설치합니다(Mac에서 소스로 빌드됩니다).
+Homebrew로 설치합니다.
 
 ```sh
 brew install yoonpooh/tap/sparekey
 ```
 
-**2. 설정** — Mac이 잠금 해제된 상태에서, SSH가 아닌 로컬 터미널에서 실행합니다.
-
-```sh
-sparekey setup --skill codex   # or: --skill claude, --skill claude,codex, --no-skill
-```
-
-macOS가 서명 키 사용을 물으면 **Always Allow**가 아니라 **Allow**를 누르세요. 로그인 암호는 화면에 표시되지 않는 입력란에 직접 입력합니다.
-
-**3. 사용** — 에이전트에게 GUI 작업을 맡기거나 직접 실행해 보세요.
-
-```sh
-sparekey status   # locked or unlocked
-sparekey doctor   # check the install
-```
-
-**에이전트에게 맡기기.** Codex, Claude Code 같은 에이전트에 아래 내용을 붙여넣으세요. 에이전트가 설치를 마치고, 비밀번호 입력이 필요한 setup 단계만 사용자에게 넘깁니다. 비밀번호는 직접 터미널에서 입력해야 하기 때문입니다.
-
-```text
-Install Sparekey on this Mac: https://github.com/yoonpooh/sparekey
-1. Run `brew install yoonpooh/tap/sparekey`.
-2. Setup asks for my login password, so don't run `sparekey setup` yourself.
-   Tell me the exact command to run in my own terminal, with the --skill
-   option for the agent you are, and wait until I say it's done.
-3. Run `sparekey doctor` and report the result.
-Never ask me for the password.
-```
-
-<details>
-<summary><strong>소스에서 직접 빌드하기</strong></summary>
+소스에서 빌드하려면 다음을 실행합니다.
 
 ```sh
 git clone https://github.com/yoonpooh/sparekey.git
@@ -94,201 +45,126 @@ swift build -c release
 .build/release/sparekey setup --skill codex
 ```
 
-그다음 `sparekey`를 `PATH`에 추가합니다.
+소스 설치 후 helper를 `PATH`에 추가하는 방법과 formula 템플릿의 제약은 [영문 설치 안내](README.md#installation)를 참고하세요.
+저장소의 formula에는 릴리스 체크섬 자리표시자가 있으므로 해당 파일을 직접 릴리스 formula로 설치하지 마세요.
+
+## 빠른 시작과 사용법
+
+Homebrew 설치 후, 잠금 해제된 Mac의 본인 로컬 터미널에서 설정합니다.
 
 ```sh
-ln -s "$HOME/Library/Application Support/sparekey/bin/sparekey" ~/.local/bin/sparekey
-sparekey doctor
+sparekey setup --skill codex
 ```
 
-</details>
+`--skill claude`, `--skill claude,codex`, `--no-skill`도 선택할 수 있습니다. 선택 옵션을 생략하면 설치할 스킬을 묻습니다.
+setup은 로컬 서명 ID를 만들거나 재사용하고, helper를 서명하고, 필요하면 로그인 암호를 저장한 뒤 사용자별 LaunchAgent를 시작합니다.
+암호는 터미널의 숨김 입력란에만 입력하세요. 서명 키 사용을 묻는 macOS 창에서는 **Always Allow** 대신 **Allow**를 선택하고, helper의 손쉬운 사용 권한 안내를 따르세요.
 
-<details>
-<summary><strong>setup이 하는 일</strong></summary>
+```sh
+sparekey doctor
+sparekey status --json
+```
 
-1. 로그인 Keychain에 `sparekey local signing` ID를 만듭니다(첫 실행 때만).
-2. helper에 서명하고 `~/Library/Application Support/sparekey/bin/sparekey`에 설치합니다.
-   - macOS가 서명 키 사용을 물으면 **Always Allow**가 아니라 **Allow**를 누르세요.
-3. 로그인 암호를 두 번 입력받습니다. 입력 내용은 보이지 않으며 macOS로 확인합니다.
-   - 암호를 채팅, 명령 인수, 환경 변수에 절대 붙여 넣지 마세요.
-4. 백그라운드 helper를 시작하고 선택한 에이전트 스킬을 설치합니다.
-5. helper의 **Accessibility** 권한을 켜도록 안내합니다. 설정 창을 열고, Finder에서 파일을 보여 주고, 경로를 복사해 둔 다음, 권한을 켜면 다시 확인합니다.
+설치나 스킬 갱신 후에는 에이전트의 새 대화를 시작하세요. 스킬이 상태 확인, probe, 잠금 해제, 작업 후 정리를 안내합니다.
+직접 잠긴 Mac에서 작업할 때는 다음 순서로 결과를 확인합니다.
 
-</details>
+```sh
+sparekey probe --json
+sparekey unlock --json
+```
 
-### 업그레이드
+`probe`는 화면을 깨우고 암호 입력란을 확인하지만 암호를 읽거나 제출하지 않습니다.
+암호 유예 시간에 화면이 깨어나 `unlocked`와 `lockToken`을 반환하면 그 토큰을 보관하고 `unlock`은 생략합니다.
+그 외에는 성공한 `unlock`의 토큰을 사용합니다. 작업이 반환받은 토큰만 정리에 사용하세요.
 
-`brew upgrade sparekey`를 실행했거나 다시 빌드했다면 `sparekey setup`을 다시 실행하세요. 그 전까지 새 CLI는 `helper_version_mismatch`를 보고합니다. helper가 암호를 더 이상 읽지 못하는 경우가 아니라면, setup은 암호를 다시 묻지 않고 서명된 helper만 갱신합니다.
+```sh
+sparekey lock --lock-token "$TASK_LOCK_TOKEN" --json
+```
 
-## 주요 기능
+`TASK_LOCK_TOKEN`은 반환된 토큰을 담는 예시 셸 변수이며 Sparekey 설정 변수가 아닙니다.
+처음부터 잠금 해제된 세션에 새 재잠금 권한이 생기지는 않습니다. `relock_revoked`면 현재 상태를 유지하고, 정리 목적으로 `--force`를 사용하지 마세요.
 
-- **확인까지 하는 잠금 해제와 잠금.** `unlock`은 암호를 한 번 제출하고 바뀐 상태를 확인합니다. `lock`은 잠금을 확인한 뒤 화면 유지 기능을 해제하고 디스플레이도 끕니다.
-- **화면 가림막.** Codex의 Locked Computer Use에서 영감을 받았습니다. Sparekey 로고와 “Your agent is using this Mac” 문구, **Unlock Mac** 버튼이 있는 검은 가림막이 에이전트가 일하는 동안 실제 디스플레이를 가립니다.
-  - 암호를 제출하기 **전에** 잠금 화면 아래에 먼저 깔리므로 데스크톱이 잠깐이라도 드러나지 않습니다.
-  - 스크린샷과 화면 녹화에는 잡히지 않아 에이전트는 실제 화면을 그대로 보고, 클릭과 입력도 아래로 전달됩니다.
-  - **Unlock Mac**을 누르고 macOS 확인창에서 인증하면 가림막이 사라져 바로 사용할 수 있습니다. 인증을 취소하면 가림막이 유지됩니다. `sparekey lock`이나 다른 방법으로 다시 잠그면 가림막이 사라집니다.
-  - `sparekey unlock --no-cover`로 가림막 없이 풀 수 있습니다. 가림막은 화면을 가릴 뿐 Mac을 잠그지는 않습니다.
-- **디스플레이 깨어 있기.** 잠금 해제가 확인되면 `sparekey lock`, 다른 방식의 재잠금, 또는 60분 경과 중 먼저 오는 시점까지 디스플레이가 잠들지 않습니다. 작업 도중 유휴 잠자기로 다시 잠기는 일을 막습니다.
-- **잠금 화면 복구.** 깨어 있는 잠금 화면에 계정 대신 배경화면과 시계만 보이면, 디스플레이를 한 번 잠재웠다가 깨워 계정을 다시 불러옵니다. 확인되지 않은 화면에는 절대 입력하지 않습니다.
-- **이상하면 멈춤.** 암호 제출은 최대 한 번, 30초 시도 제한, 잠금 해제가 확인되지 않으면 차단기가 작동합니다.
-- Codex와 Claude Code용 **에이전트 스킬**, 스크립트용 `--json` 출력을 제공합니다.
+## 설정
+
+사용자 설정 파일 대신 CLI 옵션을 사용합니다. 경로 전체는 [영문 설정 안내](README.md#configuration)에 있습니다.
+
+- helper는 `~/Library/Application Support/sparekey/bin/sparekey`에 설치됩니다.
+- Codex 스킬은 `~/.agents/skills/sparekey/SKILL.md`, Claude Code 스킬은 `~/.claude/skills/sparekey/SKILL.md`에 설치됩니다.
+- `setup --identity NAME`으로 기존 코드 서명 ID를 선택하고 `setup --reset-password`로 저장 암호를 바꿉니다.
+- `unlock --no-cover`는 해당 잠금 해제의 기본 가림막을 생략합니다.
+- 나중에 `sparekey skill install --agent codex` 또는 `--agent claude`로 스킬을 설치할 수 있습니다.
+
+수정된 스킬은 확인 또는 `skill install --force`로 교체하며 `SKILL.md.bak`에 백업합니다. 기존 백업은 덮어쓰지 않습니다.
+이전 Sparekey 플러그인 마이그레이션에만 Codex CLI가 필요하며, 제거를 확인한 뒤 스킬을 씁니다. 신규 설치에는 Codex CLI가 필요 없습니다.
+
+업그레이드나 재빌드 후에는 로컬에서 `sparekey setup`으로 helper와 스킬을 갱신하세요. 저장 암호를 계속 읽을 수 있으면 재사용합니다.
+로컬 대화형 터미널에서 `sparekey uninstall`을 실행하면 관리되는 설치와 내용이 일치하는 스킬을 제거합니다.
+서명 ID, 손쉬운 사용 항목, 수정된 스킬, 직접 만든 심볼릭 링크와 Homebrew CLI는 별도로 제거해야 합니다.
+
+## CLI 참조
+
+```sh
+sparekey --help
+sparekey help unlock
+sparekey --version
+```
+
+[CLI 참조](docs/CLI.md)에 공개 명령의 실제 옵션, JSON 필드, 종료 코드, 토큰 규칙을 모았습니다. 인수 없이 실행하면 도움말이 나옵니다.
+`--json`은 `unlock`, `lock`, `status`, `probe`, `doctor`에서 지원합니다. 종료 코드는 성공 `0`, 작업 실패 `1`, 사용법 오류 `2`입니다.
 
 ## 동작 방식
 
-```text
-agent ──▶ sparekey CLI ──(private Unix socket, same-user check)──▶ helper (LaunchAgent)
-                                                                     │
-                     verifies console user, Apple-signed loginwindow,│
-                     your account, and a single secure password field│
-                                                                     ▼
-                         login Keychain ──▶ one submission ──▶ state check
-```
+CLI가 비공개 Unix 소켓으로 사용자별 서명 helper에 요청을 보냅니다. 양쪽에서 상대 사용자 ID를 확인합니다.
+helper는 콘솔 세션, Apple 서명의 `loginwindow`, 계정 표시와 암호 입력란을 검증한 뒤 로그인 Keychain의 암호를 사용합니다.
+30초 시도 제한과 확인되지 않은 제출 후 차단기가 반복 실패를 제한합니다.
 
-- `setup`은 바이너리를 고정된 위치에 복사하고, 로컬 코드 서명 ID로 서명한 뒤, 사용자별 백그라운드 helper로 실행합니다.
-- 암호는 로그인 Keychain에 저장되며, 서명된 그 helper만 읽을 수 있습니다.
-- helper는 확인된 암호 입력란에만 입력하고 **최대 한 번만** 제출합니다. 다른 계정, 대화상자, 복구 화면, 레이아웃 변경처럼 예상하지 못한 상황에서는 안전하게 중단합니다.
-- 재시작해도 유지되는 30초 제한과 차단기가, 오래된 암호로 로그인 실패가 쌓이는 것을 막습니다.
+기본 가림막은 암호 제출 전에 잠금 화면 아래에 배치됩니다. **Unlock Mac**에서 macOS 인증을 완료하면 가림막을 해제하고 작업의 재잠금 권한을 취소합니다.
+시스템 잠금 이벤트, 화면 유지 종료, helper 재시작도 토큰을 무효화합니다. 60분 제한은 화면 유지 종료이며 자동 잠금 예약이 아닙니다.
+[설계 문서](docs/DESIGN.md)와 [에이전트 스킬](skills/sparekey/SKILL.md)에 세부 흐름이 있습니다.
 
-설계 기록은 [docs/DESIGN.md](docs/DESIGN.md)에 있습니다.
+## 보안 주의 사항
 
-## 에이전트 스킬
+설치 전에 [보안 정책](SECURITY.md)을 읽으세요.
 
-setup은 **Codex 스킬**을 `~/.agents/skills/sparekey/SKILL.md`에, **Claude Code 스킬**을 `~/.claude/skills/sparekey/SKILL.md`에 직접 설치합니다. 신규 설치에는 Codex CLI가 필요하지 않습니다. 나중에 따로 설치할 수도 있습니다:
+- 같은 사용자 권한의 모든 프로세스가 helper에 잠금 해제를 요청할 수 있습니다. 신뢰할 수 있는 개인 계정에서 사용하세요.
+- 가림막은 화면을 숨길 뿐 Mac을 잠그거나 보지 않고 하는 물리 입력을 막지 않습니다. 캡처에는 가림막이 빠집니다.
+- helper는 네트워크가 아닌 로컬 소켓을 사용합니다. 이미 본인 권한으로 실행 중인 악성코드를 막지는 못합니다.
+- 암호를 채팅, 명령 인수, 환경 변수, 문서에 넣지 마세요. 작업 토큰도 로그나 보고서에 저장하지 마세요.
+- 실패한 잠금 해제를 반복하거나 계정·입력란 검증을 우회하지 마세요. 취약점은 보안 정책에 따라 비공개로 보고하세요.
 
-```sh
-sparekey skill install --agent codex   # or: --agent claude
-```
+## 문제 해결
 
-Sparekey 0.3.0–0.3.3의 플러그인이 남아 있으면 Codex CLI로 제거하고 확인한 뒤 스킬을 설치합니다. 개인 마켓플레이스의 해당 항목만 제거하며 다른 플러그인, 기존 원본 파일과 복구 백업은 보존합니다. 제거 실패 시 스킬을 변경하지 않으므로 오류를 해결하고 명령을 다시 실행하세요. 수정한 스킬은 확인 또는 `--force` 후 `SKILL.md.bak`에 백업하며 기존 백업을 덮어쓰지 않습니다. 설치 후 새 Codex 대화를 시작하세요. `doctor`는 스킬 파일을 검사하고 `codex_skill` JSON 키를 유지합니다. `uninstall`은 내용이 일치하는 스킬만 삭제하고 이전 플러그인 제거를 시도합니다.
+먼저 `sparekey doctor`를 확인하세요. 설치 점검 성공이 실제 잠금 화면 검증이나 잠금 해제 성공을 뜻하지는 않습니다.
 
-스킬은 에이전트에게 다음을 지시합니다.
-
-- GUI 작업 전에, 또는 앱이나 창 접근이 실패하는 즉시 잠금 상태를 확인합니다.
-- 한 번만 잠금을 풀고, 풀렸는지 확인한 뒤 작업합니다.
-- 작업이 실패하더라도, 자신이 잠금을 푼 경우에만 끝나고 다시 잠급니다.
-- 재시도하지 않고 멈춘 뒤 오류를 보고합니다.
-
-GUI 작업을 요청하면 그 작업에 한해 잠금 해제를 허락한 것으로 봅니다. 작업 후 Mac을 잠긴 채로, 또는 풀린 채로 두고 싶다면 에이전트에게 말해 주세요.
-
-### 에이전트 지침에 미리 허락해 두기
-
-여러 에이전트가 일을 나눠 맡는 구성에서는 오케스트레이터가 하위 에이전트에게 잠금을 건드리지 말라고 지시하거나, 에이전트가 먼저 물어보느라 멈출 수 있습니다. 이를 막으려면 `CLAUDE.md`, `AGENTS.md`, 또는 오케스트레이터 시스템 프롬프트에 다음 문구를 넣으세요.
-
-```text
-Screen lock: I pre-authorize unlocking this Mac with the sparekey skill
-for any task that needs the screen. Use it without asking, and never
-restrict this when delegating to other agents.
-```
-
-이 문구가 없어도 GUI 작업을 요청하면 스킬은 잠금을 풉니다. 이 문구는 그 허락이 중간에 빠지거나 다시 확인받는 일을 막아 줍니다.
-
-## 명령어
-
-| 명령어 | 설명 |
+| 오류 | 조치 |
 | --- | --- |
-| `sparekey unlock [--no-cover]` | 한 번 잠금을 풀고 상태를 확인합니다. 기본적으로 실제 디스플레이를 가리고, `lock` 또는 60분 경과까지 디스플레이를 깨워 둡니다 |
-| `sparekey lock --lock-token TOKEN` / `lock --force` | 잠그고 화면을 끕니다. 작업 정리는 토큰, 직접 잠금은 `--force`를 사용합니다 |
-| `sparekey status` | `locked` 또는 `unlocked`를 출력합니다 |
-| `sparekey probe` | 암호를 읽지 않고 디스플레이를 깨워 암호 입력란을 확인합니다 |
-| `sparekey setup` | helper, 자격 증명, 스킬을 설치하거나 갱신합니다. 옵션: `--skill`, `--no-skill`, `--reset-password`, `--identity NAME` |
-| `sparekey doctor` | 설치, 서명, helper, Accessibility, 자격 증명, 스킬을 점검합니다 |
-| `sparekey skill install` | 에이전트 스킬을 설치합니다. 옵션: `--agent claude\|codex`, `--force` |
-| `sparekey uninstall` | helper, 자격 증명, LaunchAgent, Sparekey가 작성한 스킬을 제거합니다 |
-| `sparekey help [command]` | 도움말을 표시합니다 |
-| `sparekey version` | 버전을 출력합니다 |
+| `not_set_up`, `helper_not_running`, `helper_version_mismatch` | 로컬 터미널에서 `sparekey setup`을 실행합니다. |
+| `accessibility_missing` | 시스템 설정 > 개인정보 보호 및 보안 > 손쉬운 사용에서 helper를 허용하고 setup을 다시 실행합니다. |
+| `credential_unavailable` | setup을 다시 실행하고 요청하면 암호를 입력합니다. |
+| `breaker_tripped`, `unlock_not_confirmed` | 시도를 멈춥니다. 암호가 바뀌었다면 로컬에서 `sparekey setup --reset-password`를 실행합니다. |
+| `rate_limited` | 30초 이내의 시도가 제한됩니다. 반복 실행하지 않습니다. |
+| `login_account_mismatch`, `login_window_unsupported`, `field_not_ready` | 오류와 현재 잠금 화면을 확인합니다. 검증되지 않은 입력란에는 입력하지 않습니다. |
+| `relock_revoked` | 현재 상태를 유지합니다. `--force`로 우회하지 않습니다. |
+| `display_sleep_not_confirmed` | 잠금은 성공했을 수 있습니다. 추가 동작 전에 `status`를 확인합니다. |
 
-인수 없이 `sparekey`만 실행하면 도움말이 나오며, 잠금은 절대 풀리지 않습니다.
+남아 있는 응용 프로그램 강제 종료 창도 지원하지 않는 화면으로 판정될 수 있습니다. 제한된 복구 절차는 [스킬](skills/sparekey/SKILL.md)을 참고하세요. probe 실패는 암호 제출을 뜻하지 않습니다.
 
-<details>
-<summary><strong>JSON 출력, 종료 코드, 오류 코드</strong></summary>
+## 개발
 
-`unlock`, `lock`, `status`, `probe`, `doctor`는 `--json`을 지원합니다.
-
-```json
-{"ok":true,"command":"status","state":"locked","message":"locked"}
-{"ok":false,"command":"unlock","error":{"code":"rate_limited","message":"..."}}
-```
-
-종료 코드: `0` 성공, `1` 작업 실패, `2` 사용법 오류. `status`는 어느 상태를 보고하든 성공이므로 `state` 값을 확인하세요.
-
-오류 코드: `usage`, `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `no_console_session`, `accessibility_missing`, `credential_unavailable`, `login_account_mismatch`, `login_window_unsupported`, `field_not_ready`, `cover_unavailable`, `rate_limited`, `breaker_tripped`, `unlock_not_confirmed`, `lock_not_confirmed`, `relock_revoked`, `display_sleep_not_confirmed`, `internal`. `doctor --json`은 `skill_outdated`도 보고할 수 있고, 검사별 결과를 담은 `statuses` 맵(`ok`, `warn`, `fail`, `skip`)을 추가합니다.
-
-`login_account_mismatch`는 읽힌 이름이 현재 사용자 이름과 정확히 일치하지 않을 때만 보고합니다. 읽을 수 없는 계정 표시는 제한된 시간 안에서 기다린 뒤 `field_not_ready`로 중단합니다. `doctor` 정상 결과는 잠금 화면 검증을 뜻하지 않습니다.
-
-</details>
-
-## FAQ와 문제 해결
-
-먼저 `sparekey doctor`를 실행하세요. 실패한 항목마다 해결 방법이 함께 나옵니다.
-
-**가림막이 Mac을 잠가 주나요?**
-아닙니다. 화면을 가릴 뿐 잠그지는 않습니다. 직접 사용하려면 가림막의 **Unlock Mac**을 누르고 인증하세요. 직접 Mac을 잠그고 화면도 끄려면 `sparekey lock --force`를 실행하세요.
-
-**에이전트 스크린샷에 가림막이 보이지 않아요.**
-의도된 동작입니다. 스크린샷과 화면 녹화에서는 가림막이 빠지므로 에이전트는 실제 화면을 봅니다.
-
-**잠금 화면에 배경화면과 시계만 보여요.**
-Sparekey가 디스플레이를 한 번 잠재웠다가 깨워 계정을 다시 불러옵니다. 확인되지 않은 화면에는 절대 입력하지 않습니다.
-
-**`helper_version_mismatch`**
-CLI는 업그레이드되거나 다시 빌드됐지만 helper는 그대로인 상태입니다. `sparekey setup`을 다시 실행하세요.
-
-**Accessibility 권한 없음**
-시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용에서 `~/Library/Application Support/sparekey/bin/sparekey`를 켜세요. 방금 켰다면 `setup`을 다시 실행하거나 helper를 재시작하세요.
+저장소 루트에서 실행합니다.
 
 ```sh
-launchctl kickstart -k "gui/$(id -u)/io.github.yoonpooh.sparekey.helper"
+swift build
+swift test
+swift build -c release
+python3 scripts/embed-agent-assets.py --check
 ```
 
-**`breaker_tripped` 또는 `unlock_not_confirmed`**
-암호를 바꾼 뒤라면 저장된 암호가 틀렸을 수 있습니다. 로컬에서 `sparekey setup --reset-password`를 실행하세요.
-
-**`login_window_unsupported`와 남아 있는 강제 종료 창**
-
-남아 있는 **응용 프로그램 강제 종료** 창도 loginwindow 창 개수에 포함됩니다. 오류에 창 개수가 표시되면 스킬은 네이티브 창 정보로 해당 대화상자를 확인하고 닫기 버튼만 누른 뒤 probe를 한 번 다시 실행할 수 있습니다. 앱 강제 종료, 다른 대화상자 닫기, 계정·비밀번호 필드 확인 우회는 허용하지 않습니다. probe 실패는 비밀번호 제출 실패가 아닙니다.
-
-**업그레이드 후 `credential_unavailable`**
-`sparekey setup`을 다시 실행하고, 요청하면 암호를 입력하세요.
-
-**`rate_limited`**
-최근 30초 안에 시도한 기록이 있습니다. 반복해서 시도하지 마세요.
-
-## 보안
-
-설치 전에 [SECURITY.md](SECURITY.md)를 꼭 읽어 주세요. 요약하면 다음과 같습니다.
-
-- **내 사용자 계정으로 실행되는 모든 프로세스가 helper에 잠금 해제를 요청할 수 있습니다.** Sparekey는 신뢰할 수 있는 개인 계정을 위한 도구이며, 이미 내 권한으로 실행 중인 악성코드는 막지 못합니다.
-- 기본 가림막은 에이전트가 작업하는 동안 실제 디스플레이를 가립니다. 스크린샷에는 가림막이 나오지 않으며, 에이전트는 그 아래의 앱을 계속 조작할 수 있습니다.
-- helper는 강화된 런타임(hardened runtime)을 사용하고, 네트워크가 아닌 비공개 로컬 소켓에서만 요청을 받습니다.
-- 서명 키는 내보낼 수 없고, 이 키를 쓰도록 미리 신뢰된 앱도 없습니다. **Always Allow**를 누르면 이 상태가 바뀝니다.
-- 로그인 암호를 채팅, 명령 인수, 환경 변수에 절대 붙여 넣지 마세요. setup의 숨김 입력란에만 입력하세요.
-
-취약점은 GitHub 보안 권고(security advisories)를 통해 비공개로 알려 주세요.
-
-## 제거
-
-```sh
-sparekey uninstall
-```
-
-저장된 자격 증명, helper, LaunchAgent, 런타임 파일, Sparekey가 작성한 스킬 파일을 제거합니다. 다음 항목은 남습니다.
-
-- `sparekey local signing` ID(원하면 Keychain Access에서 삭제하세요)
-- Accessibility 항목(시스템 설정에서 제거하세요)
-- `~/.local/bin/sparekey` 링크
-
-## 크레디트
-
-잠금 화면과 상호 작용하는 방식은 Cindy의 [MacScreenUnlock.swift](https://github.com/makecindy/cindy/blob/main/packages/remote-credentials-native/Sources/CindyRemoteCredentials/MacScreenUnlock.swift)(Apache-2.0)를 참고했습니다. Sparekey는 독립적으로 구현되었습니다.
-
-### 개발 버전의 잠금 복원 정책
-
-sparekey는 실제 macOS 화면을 조작하는 Computer Use에만 사용합니다. Headless agent-browser, Playwright, DOM/CDP 작업과 웹페이지 스크린샷에는 필요하지 않습니다.
-
-`unlock --json`(또는 잠금 유예 상태를 깨운 `probe --json`)이 반환한 `lockToken`으로 `lock --lock-token TOKEN --json`을 실행해야 작업 종료 시 잠금을 복원할 수 있습니다. 커버의 Unlock Mac 버튼에서 인증 완료, 시스템 잠금 이벤트 또는 화면 유지 종료 시 토큰은 폐기됩니다. 사용자가 비밀번호로 다시 열어도 기존 작업은 재잠금할 수 없습니다. `relock_revoked` 오류가 발생하면 현재 상태를 유지합니다. 토큰 없는 `lock`은 거부되며, 사용자가 직접 잠금을 요청하는 경우에는 `lock --force`를 사용합니다. 에이전트 정리 작업에서 `--force`로 우회하면 안 됩니다.
-
-패치 적용에는 새 바이너리 빌드와 로컬 `sparekey setup`을 통한 helper·스킬 갱신이 필요합니다. 실행 중인 기존 스레드의 스킬 지침은 자동으로 교체되지 않습니다.
+`Package.swift`는 실행 파일, `SparekeyCore` 타깃, core·transport 테스트를 정의합니다. 에셋 검사는 스킬 원본과 생성된 Swift 파일의 일치 여부를 확인합니다.
+[Shimmer 렌더러](scripts/render-shimmer/README.md)는 helper 조작 없이 이미지를 만듭니다.
+[로컬 서명 실험](scripts/spike/README.md)은 Keychain과 LaunchAgent를 변경하므로 의도적으로 실행해야 합니다.
+릴리스 기록은 [변경 기록](CHANGELOG.md)에 있습니다. 잠금 화면 접근 방식은 [Cindy](https://github.com/makecindy/cindy)를 참고했으며 Sparekey는 독립 구현입니다.
 
 ## 라이선스
 
-[MIT](LICENSE) © yoonpooh
+[MIT](LICENSE), 저작권자 yoonpooh.

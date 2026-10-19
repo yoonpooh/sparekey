@@ -1,21 +1,41 @@
-# Render shimmer evidence
+# Sparekey shimmer renderer
 
-Run from a macOS checkout with Xcode Command Line Tools. The script compiles the
-production cover artwork and shimmer sources directly with `swiftc`. It does not
-need a package build, show a window, capture the screen, contact the helper, or
-change the Mac's lock state.
+Render the production cover artwork offscreen as PNG images or animation frames.
 
-## Still frames
+Return to the [project README](../../README.md) for installation and architecture.
+
+## Requirements
+
+Use a macOS checkout with Xcode Command Line Tools and `swiftc`.
+Video encoding additionally requires an existing `ffmpeg` installation with `libx264`.
+The wrapper compiles production artwork sources directly; it does not need a Swift package build.
+
+## Usage
+
+Run from the repository root:
 
 ```sh
 scripts/render-shimmer.sh /tmp/sparekey-shimmer-evidence
 ```
 
-The output contains three shimmer PNGs, two identical simulated Reduce Motion
-PNGs, render notes, and the renderer executable. The default output directory is
-`/tmp/sparekey-shimmer-evidence`. Keep generated files outside the checkout.
+The exact wrapper syntax is:
 
-## Video
+```text
+scripts/render-shimmer.sh [OUTPUT_DIRECTORY [--video]]
+```
+
+The default directory is `/tmp/sparekey-shimmer-evidence`. `--video` must follow an explicit output directory.
+Keep outputs outside the checkout. Existing outputs with the same names can be overwritten.
+
+| Mode | Output |
+| --- | --- |
+| Default | `render-shimmer`, `shimmer-1.png` through `shimmer-3.png`, `reduce-motion.png`, `reduce-motion-repeat.png`, `render-notes.txt` |
+| `--video` | `render-shimmer`, `frames/frame-0000.png` through `frames/frame-0359.png`, `video-render-notes.txt` |
+
+Images are 1440 × 900 pixels. The default mode samples the shimmer at 30%, 50%, and 70% of the production cycle and renders two static Reduce Motion samples.
+Video mode generates 360 frames at 30 fps, representing 12 seconds. The production cycle is 5.5 seconds.
+
+Encode the frame sequence separately:
 
 ```sh
 scripts/render-shimmer.sh /tmp/sparekey-shimmer-video --video
@@ -24,13 +44,23 @@ ffmpeg -n -framerate 30 -i /tmp/sparekey-shimmer-video/frames/frame-%04d.png \
   -an /tmp/sparekey-shimmer-video/shimmer.mp4
 ```
 
-Encoding needs an existing ffmpeg installation with libx264. The renderer creates
-360 frames at 1440×900 for 12 seconds. The current 5.5-second cycle completes twice
-at 11 seconds. ffmpeg refuses to overwrite an existing video with `-n`.
+The `-n` option makes ffmpeg refuse to overwrite an existing video.
 
-`CALayer.render(in:)` does not advance animations. The renderer samples the actual
-production `CABasicAnimation` endpoints at `time % duration` using its linear
-timing, then draws the same text mask and gradient layer. It checks the animation
-shape before rendering. This verifies rendered appearance and timing; it does
-not verify live WindowServer playback, physical cover visibility, or CPU/battery
-usage. The frame loop exists only in this development tool.
+## How it works and limits
+
+The [wrapper](../render-shimmer.sh) compiles `CoverLayout.swift`, `CoverShimmer.swift`, `EmbeddedLogo.swift`, and this directory's [main.swift](main.swift).
+`CALayer.render(in:)` does not advance animations, so the tool samples the production animation's endpoints and draws the text mask and gradient at each position.
+Video mode checks the animation's linear `position.x` shape before sampling.
+
+No window is shown, no screen is captured, and no helper or lock operation is performed.
+The output supports visual inspection of artwork and sampled timing. It does not prove live WindowServer playback, physical cover visibility, or CPU and battery usage.
+
+## Troubleshooting
+
+- For compiler errors, check the macOS SDK and `swiftc` installation.
+- For an animation precondition failure, compare this renderer with the production animation before using its frames as evidence.
+- For encoding failures, check that ffmpeg supports `libx264` and that the target video does not already exist.
+
+## License
+
+[MIT](../../LICENSE), as part of Sparekey.
