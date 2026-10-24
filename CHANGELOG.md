@@ -5,6 +5,8 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-10-24
+
 - Keep polling when `probe` or `unlock` preparation sees an unsupported loginwindow tree right after waking a sleeping display. loginwindow briefly exposes a transitional tree while it re-raises the lock UI, and preparation used to stop on the first snapshot with `login_window_unsupported`. Preparation still sends no input until the layout verifies, and still fails closed with `login_window_unsupported` when the layout does not verify within the existing 5-second preparation window.
 - Name the rejected AX metadata in the error, for example `Unsupported login screen (unexpected AXSystemDialog). No input was sent.` Only roles, subroles, and identifiers are reported.
 - Skip the display sleep/wake account recovery until at least one snapshot has a verified layout.
