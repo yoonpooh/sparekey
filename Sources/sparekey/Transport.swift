@@ -72,7 +72,7 @@ enum Transport {
         try verifyPeer(fd)
         try send(Request(command, noCover: noCover, lockToken: lockToken, forceLock: forceLock), to: fd)
         let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))
-        guard reply.v == 1, reply.helperVersion == "0.3.8" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
+        guard reply.v == 1, reply.helperVersion == "0.3.9" else { throw SparekeyError("Helper version differs. Run 'sparekey setup'.", code: "helper_version_mismatch") }
         if command == "unlock", reply.error?.code == "usage" {
             throw SparekeyError("The installed helper does not support covered unlocks. Run 'sparekey setup' to update it.", code: "helper_version_mismatch")
         }
