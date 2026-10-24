@@ -200,15 +200,33 @@ public struct LoginNode {
 }
 public enum LoginPolicy {
     public enum Preparation: Equatable { case ready, collapsed, waitingForAccount, waitingForField }
-    private static func safe(_ nodes: [LoginNode]) -> Bool {
-        nodes.first?.role == "AXWindow" && nodes.first?.identifier == "login" && !nodes.contains {
-            ["AXSheet", "AXList", "AXTable", "AXOutline", "AXComboBox", "AXPopUpButton"].contains($0.role)
-                || ["AXDialog", "AXSystemDialog"].contains($0.subrole)
-                || ["ResetPasswordTitle", "ResetUsingRecoveryButton"].contains($0.identifier)
+    /// Returns nil for a supported lock-screen tree, otherwise a non-secret reason naming the rejected AX metadata.
+    /// Only roles, subroles, and identifiers are reported; element values are never read here.
+    public static func unsupportedReason(_ nodes: [LoginNode]) -> String? {
+        guard let root = nodes.first else { return "no login window elements" }
+        guard root.role == "AXWindow", root.identifier == "login" else {
+            return "root \(root.role.isEmpty ? "-" : root.role) identifier \(root.identifier.isEmpty ? "-" : root.identifier)"
         }
+        if let node = nodes.first(where: { ["AXSheet", "AXList", "AXTable", "AXOutline", "AXComboBox", "AXPopUpButton"].contains($0.role) }) {
+            return "unexpected \(node.role)"
+        }
+        if let node = nodes.first(where: { ["AXDialog", "AXSystemDialog"].contains($0.subrole) }) {
+            return "unexpected \(node.subrole)"
+        }
+        if let node = nodes.first(where: { ["ResetPasswordTitle", "ResetUsingRecoveryButton"].contains($0.identifier) }) {
+            return "password reset element \(node.identifier)"
+        }
+        return nil
     }
+    private static func safe(_ nodes: [LoginNode]) -> Bool { unsupportedReason(nodes) == nil }
+    /// Preparation only reads the tree and sends no secret, so an unsupported layout is transient here:
+    /// loginwindow briefly exposes a transitional tree while it re-raises the lock UI after a display wake.
+    /// The caller keeps polling within its bounded deadline and sends nothing until the layout verifies.
+    /// `field(in:)` and `submit(in:)` stay strict and non-transient.
     public static func preparation(in nodes: [LoginNode], ownLabel: Bool) throws -> Preparation {
-        guard safe(nodes) else { throw SparekeyError("Unsupported login screen. No input was sent.", code: "login_window_unsupported") }
+        if let reason = unsupportedReason(nodes) {
+            throw SparekeyError("Unsupported login screen (\(reason)). No input was sent.", code: "login_window_unsupported", transient: true)
+        }
         let fields = nodes.indices.filter { nodes[$0].role == "AXTextField" }
         if fields.isEmpty { return ownLabel ? .collapsed : .waitingForAccount }
         guard fields.count == 1, let index = fields.first, nodes[index].identifier == "UserPasswordTextField",

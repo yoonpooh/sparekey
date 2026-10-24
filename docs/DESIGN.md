@@ -177,6 +177,11 @@ rejects `v:2` before password submission; the CLI reports
   then polls again. It never sends mouse or keyboard input for this recovery.
   An AX window recreated after wake is re-baselined only when the loginwindow
   process identity is unchanged; all account and field checks still apply.
+- **Wake transition.** Waking a sleeping display can expose a transitional
+  loginwindow tree for a moment. During preparation only, an unsupported
+  layout is retried within the same bounded deadlines, and the account
+  recovery above waits for a verified layout. No input is sent until the
+  layout verifies, and password-field lookup and submission stay strict.
 
 ## Physical cover
 

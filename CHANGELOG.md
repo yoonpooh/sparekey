@@ -3,6 +3,13 @@
 All notable changes are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+- Keep polling when `probe` or `unlock` preparation sees an unsupported loginwindow tree right after waking a sleeping display. loginwindow briefly exposes a transitional tree while it re-raises the lock UI, and preparation used to stop on the first snapshot with `login_window_unsupported`. Preparation still sends no input until the layout verifies, and still fails closed with `login_window_unsupported` when the layout does not verify within the existing 5-second preparation window.
+- Name the rejected AX metadata in the error, for example `Unsupported login screen (unexpected AXSystemDialog). No input was sent.` Only roles, subroles, and identifiers are reported.
+- Skip the display sleep/wake account recovery until at least one snapshot has a verified layout.
+- Keep field lookup and password submission strict: an unsupported layout there is never retried.
+
 ## [0.3.8] - 2026-10-19
 
 - Add a subtle left-to-right shimmer to the existing cover title using a masked Core Animation gradient with a 5.5-second cycle. No frame timer or display link is added.

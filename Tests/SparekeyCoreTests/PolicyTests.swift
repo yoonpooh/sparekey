@@ -91,15 +91,18 @@ final class PolicyTests: XCTestCase {
     }
     func testDisplayRevealRecoveryDecision() {
         XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 1.49, state: .waitingForAccount,
-                                                        sawOwnLabel: false, attempted: false))
+                                                        sawOwnLabel: false, attempted: false, sawVerifiedLayout: true))
         XCTAssertTrue(DisplayRevealPolicy.shouldRecover(elapsed: 1.5, state: .waitingForAccount,
-                                                       sawOwnLabel: false, attempted: false))
+                                                       sawOwnLabel: false, attempted: false, sawVerifiedLayout: true))
         XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForAccount,
-                                                        sawOwnLabel: true, attempted: false))
+                                                        sawOwnLabel: true, attempted: false, sawVerifiedLayout: true))
         XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForField,
-                                                        sawOwnLabel: false, attempted: false))
+                                                        sawOwnLabel: false, attempted: false, sawVerifiedLayout: true))
         XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForAccount,
-                                                        sawOwnLabel: false, attempted: true))
+                                                        sawOwnLabel: false, attempted: true, sawVerifiedLayout: true))
+        // A layout that never verified (lock UI still re-raising after wake) keeps polling instead of sleeping the display.
+        XCTAssertFalse(DisplayRevealPolicy.shouldRecover(elapsed: 2, state: .waitingForAccount,
+                                                        sawOwnLabel: false, attempted: false, sawVerifiedLayout: false))
     }
     func testCoverUnavailableConsumesLimiterWithoutTrippingBreaker() {
         var state = SafetyState()
@@ -119,6 +122,61 @@ final class PolicyTests: XCTestCase {
         XCTAssertEqual(try LoginPolicy.submit(in: nodes), 3)
         XCTAssertThrowsError(try LoginPolicy.submit(in: nodes + [nodes[3]]))
         XCTAssertThrowsError(try LoginPolicy.submit(in: nodes + [LoginNode(role: "AXSheet")]))
+    }
+    func testUnsupportedLayoutIsTransientOnlyDuringPreparation() throws {
+        let ready = [LoginNode(role: "AXWindow", identifier: "login"),
+                     LoginNode(role: "AXGroup", parent: 0),
+                     LoginNode(role: "AXTextField", subrole: "AXSecureTextField", identifier: "UserPasswordTextField", parent: 1, writable: true),
+                     LoginNode(role: "AXButton", identifier: "LUIBUTTON_GO", parent: 1, pressable: true)]
+        XCTAssertNil(LoginPolicy.unsupportedReason(ready))
+        let cases: [([LoginNode], String)] = [
+            ([], "no login window elements"),
+            ([LoginNode(role: "AXWindow")] + ready.dropFirst(), "root AXWindow identifier -"),
+            (ready + [LoginNode(role: "AXSheet", parent: 0)], "unexpected AXSheet"),
+            (ready + [LoginNode(role: "AXGroup", subrole: "AXSystemDialog", parent: 0)], "unexpected AXSystemDialog"),
+            (ready + [LoginNode(role: "AXStaticText", identifier: "ResetPasswordTitle", parent: 0)], "password reset element ResetPasswordTitle"),
+        ]
+        for (nodes, reason) in cases {
+            XCTAssertEqual(LoginPolicy.unsupportedReason(nodes), reason)
+            XCTAssertThrowsError(try LoginPolicy.preparation(in: nodes, ownLabel: true)) { error in
+                let issue = error as? SparekeyError
+                XCTAssertEqual(issue?.code, "login_window_unsupported")
+                XCTAssertEqual(issue?.transient, true)
+                XCTAssertEqual(issue?.description, "Unsupported login screen (\(reason)). No input was sent.")
+            }
+            // Field lookup and submission must never treat an unsupported layout as retryable.
+            XCTAssertThrowsError(try LoginPolicy.field(in: nodes)) { error in
+                XCTAssertEqual((error as? SparekeyError)?.code, "login_window_unsupported")
+                XCTAssertEqual((error as? SparekeyError)?.transient, false)
+            }
+            XCTAssertThrowsError(try LoginPolicy.submit(in: nodes)) { error in
+                XCTAssertEqual((error as? SparekeyError)?.transient, false)
+            }
+        }
+    }
+    func testPreparationKeepsPollingThroughWakeTransitionLayout() throws {
+        let transitional = [LoginNode(role: "AXWindow", identifier: "login"),
+                            LoginNode(role: "AXGroup", subrole: "AXSystemDialog", parent: 0)]
+        let ready = [LoginNode(role: "AXWindow", identifier: "login"),
+                     LoginNode(role: "AXGroup", parent: 0),
+                     LoginNode(role: "AXTextField", subrole: "AXSecureTextField", identifier: "UserPasswordTextField", parent: 1, writable: true),
+                     LoginNode(role: "AXButton", identifier: "LUIBUTTON_GO", parent: 1, pressable: true)]
+        var now = 0.0, attempts = 0, transientCount = 0
+        let state = try PreparationRetry.run(deadline: 5, now: { now }, sleep: { now += $0 },
+                                             onTransient: { transientCount += 1 }) { () throws -> LoginPolicy.Preparation? in
+            attempts += 1
+            return try LoginPolicy.preparation(in: attempts < 4 ? transitional : ready, ownLabel: true)
+        }
+        XCTAssertEqual(state, .ready)
+        XCTAssertEqual(transientCount, 3)
+        // A layout that never verifies still fails closed at the deadline with the specific reason.
+        now = 0
+        XCTAssertThrowsError(try PreparationRetry.run(deadline: 1, now: { now }, sleep: { now += $0 },
+                                                      onTransient: {}) { () throws -> LoginPolicy.Preparation? in
+            try LoginPolicy.preparation(in: transitional, ownLabel: true)
+        }) { error in
+            XCTAssertEqual((error as? SparekeyError)?.description, "Unsupported login screen (unexpected AXSystemDialog). No input was sent.")
+        }
     }
     func testManagedAgentOwnership() throws {
         let path = "/private/test/bin/sparekey"

@@ -278,6 +278,7 @@ enum Screen {
         var revealed = false
         var lastState = LoginPolicy.Preparation.waitingForAccount
         var sawOwnLabel = false
+        var sawVerifiedLayout = false
         var recoveryAttempted = false, slept = false, woke = false, rebaselineNext = false
         var lastTransient: SparekeyError?
         func recoveryReport() -> String {
@@ -296,6 +297,7 @@ enum Screen {
                     // A snapshot begun in time may finish late; never accept it or send Return after the phase deadline.
                     guard ProcessInfo.processInfo.systemUptime < effectiveDeadline else { return nil }
                     let state = try LoginPolicy.preparation(in: current.nodes, ownLabel: current.ownLabel)
+                    sawVerifiedLayout = true
                     if let previous {
                         if rebaselineNext {
                             // Sleep/wake may recreate AX elements, but never trust a replacement loginwindow process.
@@ -344,7 +346,7 @@ enum Screen {
             if let ready = try phase(until: firstDeadline) { return ready }
             if DisplayRevealPolicy.shouldRecover(elapsed: ProcessInfo.processInfo.systemUptime - started,
                                                  state: lastState, sawOwnLabel: sawOwnLabel,
-                                                 attempted: recoveryAttempted) {
+                                                 attempted: recoveryAttempted, sawVerifiedLayout: sawVerifiedLayout) {
                 recoveryAttempted = true
                 try revealAccount(activity: &activity, slept: &slept, woke: &woke)
                 rebaselineNext = true
