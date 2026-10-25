@@ -53,10 +53,28 @@ Stop, report the `error.code`, and tell the user what to do, except for the sing
 - `breaker_tripped`, `unlock_not_confirmed`: the saved password may be wrong. Ask the user to run `sparekey setup --reset-password` locally.
 - `rate_limited`: an attempt ran in the last 30 seconds. Check status instead of retrying.
 - `login_account_mismatch`: a populated account label did not exactly match the current user's short or full name. Ask the user to check the selected account on the Mac. This is a label mismatch, not proof that the active session changed.
-- `login_window_unsupported`: the lock screen could not be safely verified. Report the specific `error.message`; do not call it an account mismatch unless the message says so. If probe reports more than one loginwindow window and no unlock has failed, inspect only native loginwindow window metadata, even while locked. If exactly one leftover Force Quit Applications dialog is positively identified by its system-dialog role, localized title, and process list, close only that dialog using its standard close button, then rerun `sparekey probe --json` once. Require `ok: true` before continuing to unlock. Never terminate an application or dismiss an authentication or security dialog, change accounts, or bypass account/field checks. If the dialog cannot be positively identified or closed, or the repaired probe still fails, stop and ask the user to check the Mac. For all other layout failures, stop without this repair.
+- `login_window_unsupported`: the lock screen could not be safely verified. Report the specific `error.message`; do not call it an account mismatch unless the message says so. Multiple windows alone do not identify a Force Quit dialog. Follow the bounded inspection below only for a multiple-window probe failure with no earlier failed unlock. For other layout failures or after a failed unlock, stop without repair.
 - `field_not_ready`: the helper already waited within its bounded preparation period and may have tried one display sleep/wake recovery. The account label or password field is still not ready. Report what could not be verified; do not claim that another account is selected. Ask the user to check the Mac. Do not rerun probe or unlock to bypass this stop.
 
 `doctor` checks installation, permissions, and helper health. A successful doctor does not verify the lock-screen account or prove that unlock will succeed.
+
+### Inspect a multiple-window probe failure
+
+The helper selects one login window and ignores only explicitly empty, nonmodal auxiliary windows with no AX actions. Other windows remain a layout failure. The error includes bounded window role, subrole, login-identifier classification, modal flag, child count, and action count. `unknown` means an attribute was unavailable. These diagnostics do not read window titles, account labels, process lists, or password values. The helper never closes windows. Its display recovery does not dismiss dialogs.
+
+With native CUA on macOS, inspect the loginwindow app directly, even while locked:
+
+```javascript
+let loginwindow = await cua.getApp("com.apple.loginwindow");
+```
+
+This returns the app's current AX state. Use `loginwindow.getAXState()` after an action to refresh it. Do not call `cua.listWindows()` on macOS. That API is available only on Linux and Windows. CLI diagnostic window numbers are not CUA element indices.
+
+If exactly one leftover Force Quit Applications dialog is positively identified by its system-dialog role, localized title, and process list, close only that dialog using its standard close button. Use `loginwindow.click(index)` with the close button's index from the current AX state, then refresh the AX state. Never use Escape, a global shortcut, or a guessed index to dismiss a window. Never terminate an application or dismiss an authentication or security dialog, change accounts, or bypass account/field checks.
+
+If the second window, its identity, or its standard close button is absent from the available AX state, stop and ask the user to check the Mac. Do not infer its identity from an older incident, window count, or an empty title. Do not launch another app or retry unavailable APIs to find it.
+
+After the identified dialog is confirmed closed, rerun `sparekey probe --json` once. Require `ok: true` before continuing. If probe returned `state: "unlocked"`, retain its token and skip unlock. If the repaired probe still fails, stop. Never retry a failed unlock to obtain new diagnostics.
 
 Sparekey cannot help with FileVault startup, logged-out sessions, other accounts, or a sleeping Mac that is unreachable.
 """# + "\n"
