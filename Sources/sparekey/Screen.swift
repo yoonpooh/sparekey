@@ -105,6 +105,22 @@ enum Screen {
         return result
     }
 
+    static func windowMetadata(_ window: AXUIElement) throws -> LoginWindow {
+        AXUIElementSetMessagingTimeout(window, 0.2)
+        let root = LoginNode(role: try value(window, kAXRoleAttribute) as? String ?? "",
+                             subrole: try value(window, kAXSubroleAttribute) as? String ?? "",
+                             identifier: try value(window, kAXIdentifierAttribute) as? String ?? "")
+        let modal = try value(window, kAXModalAttribute) as? Bool
+        let children = try value(window, kAXChildrenAttribute) as? [AXUIElement]
+        var actions: CFArray?
+        let status = AXUIElementCopyActionNames(window, &actions)
+        guard [.success, .noValue, .attributeUnsupported].contains(status) else {
+            throw SparekeyError("Cannot inspect login window actions.", transient: true)
+        }
+        return LoginWindow(root: root, modal: modal, childCount: children?.count,
+                           actionCount: (actions as? [String])?.count)
+    }
+
     static func snapshot() throws -> Snapshot {
         guard AXIsProcessTrusted() else {
             throw SparekeyError("Accessibility permission is missing. Add the stable Sparekey copy in System Settings > Privacy & Security > Accessibility.", code: "accessibility_missing")
@@ -131,11 +147,18 @@ enum Screen {
         let root = AXUIElementCreateApplication(app.processIdentifier)
         AXUIElementSetMessagingTimeout(root, 0.2)
         let windows = try value(root, kAXWindowsAttribute) as? [AXUIElement]
-        guard let windows, windows.count == 1 else {
-            throw SparekeyError("Unsupported login window layout (expected 1 window; found \(windows.map { String($0.count) } ?? "unavailable")). Check for a leftover Force Quit Applications dialog. No password was submitted.", code: "login_window_unsupported", transient: true)
+        guard let windows, windows.count <= 8 else {
+            throw SparekeyError("Unsupported login window layout (window count \(windows.map { String($0.count) } ?? "unavailable"); inspection limit 8). No password was submitted.", code: "login_window_unsupported", transient: true)
         }
         var elements: [AXUIElement] = [], nodes: [LoginNode] = []
         let deadline = ProcessInfo.processInfo.systemUptime + 3
+        let metadata = try windows.map { window in
+            guard ProcessInfo.processInfo.systemUptime < deadline else {
+                throw SparekeyError("Login window inspection exceeded its time budget.", code: "login_window_unsupported", transient: true)
+            }
+            return try windowMetadata(window)
+        }
+        let selected = try LoginWindowPolicy.select(in: metadata)
         func visit(_ element: AXUIElement, parent: Int?, depth: Int) throws {
             guard depth < 12 else {
                 throw SparekeyError("Login screen inspection exceeded its depth limit.", code: "login_window_unsupported", transient: true)
@@ -177,7 +200,7 @@ enum Screen {
                 for child in children { try visit(child, parent: index, depth: depth + 1) }
             }
         }
-        try visit(windows[0], parent: nil, depth: 0)
+        try visit(windows[selected], parent: nil, depth: 0)
         let ownLabel = try LoginAccountPolicy.verify(in: nodes, allowedNames: [NSUserName(), NSFullUserName()]) {
             try value(elements[$0], kAXValueAttribute) as? String
         }

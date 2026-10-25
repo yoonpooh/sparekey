@@ -170,7 +170,7 @@ Start with `sparekey doctor`. It checks installation and permissions, not whethe
 | `relock_revoked` | Leave the current state unchanged. Do not fall back to `lock --force`. |
 | `display_sleep_not_confirmed` | Locking may have succeeded even though display sleep was not confirmed. Read `status` before deciding what to do next. |
 
-A leftover Force Quit Applications dialog can make the loginwindow layout unsupported. The [agent skill](skills/sparekey/SKILL.md) describes the narrowly scoped dialog recovery. A failed probe does not mean a password was submitted.
+Sparekey selects the unique login window and ignores only explicitly empty, nonmodal auxiliary windows with no AX actions. Unknown or interactive extra windows still block unlock. Layout errors include bounded AX metadata without reading window titles or password values. They do not identify the cause as Force Quit Applications, and the helper never closes windows. The [agent skill](skills/sparekey/SKILL.md) describes the narrowly scoped dialog recovery and the native macOS CUA API to inspect it. A failed probe does not mean a password was submitted.
 
 ## Development
 
