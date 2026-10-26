@@ -8,6 +8,27 @@ final class LoginWindowPolicyTests: XCTestCase {
     private let empty = LoginWindow(root: LoginNode(role: "AXWindow", subrole: "AXStandardWindow"),
                                     modal: false, childCount: 0, actionCount: 0)
 
+    func testSelectsLoginWithArbitraryNonstandardSubroles() throws {
+        for subrole in ["AXUnknown", "custom-login-subrole"] {
+            let window = LoginWindow(root: LoginNode(role: "AXWindow", subrole: subrole, identifier: "login"),
+                                     modal: false, childCount: 9, actionCount: 1)
+            XCTAssertEqual(try LoginWindowPolicy.select(in: [window]), 0)
+            XCTAssertEqual(try LoginWindowPolicy.select(in: [empty, window]), 1)
+            XCTAssertEqual(try LoginWindowPolicy.select(in: [window, empty]), 0)
+            assertUnsupported([LoginWindow(root: window.root, modal: true, childCount: 9, actionCount: 1)])
+        }
+    }
+
+    func testDiagnosticsPreserveNonemptySubroles() {
+        for subrole in ["AXUnknown", "custom-login-subrole"] {
+            let window = LoginWindow(root: LoginNode(role: "AXWindow", subrole: subrole),
+                                     modal: false, childCount: 0, actionCount: 0)
+            XCTAssertThrowsError(try LoginWindowPolicy.select(in: [login, window])) { error in
+                XCTAssertTrue(String(describing: error).contains("subrole=\(subrole)"))
+            }
+        }
+    }
+
     func testSelectsLoginAlongsideAnEmptyNonmodalWindowInEitherOrder() throws {
         XCTAssertEqual(try LoginWindowPolicy.select(in: [empty, login]), 1)
         XCTAssertEqual(try LoginWindowPolicy.select(in: [login, empty]), 0)

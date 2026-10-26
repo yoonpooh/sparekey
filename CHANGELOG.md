@@ -5,6 +5,12 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-10-26
+
+- Select the login window alongside explicitly empty, nonmodal auxiliary windows with no AX actions. Continue rejecting dialogs and unverified auxiliary windows.
+- Fix a regression where a login window with a nonstandard subrole caused `probe` and `unlock` preparation to fail with `login_window_unsupported`. Selected login windows still reject explicit dialog subroles and modal windows.
+- Preserve nonempty subrole values verbatim in window-layout diagnostics instead of reporting `other`.
+
 ## [0.3.9] - 2026-10-24
 
 - Keep polling when `probe` or `unlock` preparation sees an unsupported loginwindow tree right after waking a sleeping display. loginwindow briefly exposes a transitional tree while it re-raises the lock UI, and preparation used to stop on the first snapshot with `login_window_unsupported`. Preparation still sends no input until the layout verifies, and still fails closed with `login_window_unsupported` when the layout does not verify within the existing 5-second preparation window.
