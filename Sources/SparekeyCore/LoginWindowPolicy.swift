@@ -18,8 +18,7 @@ public enum LoginWindowPolicy {
             let metadata = windows.prefix(8).enumerated().map { index, window in
                 let root = window.root
                 let role = ["AXWindow", "AXSheet", "AXUnknown"].contains(root.role) ? root.role : "other"
-                let subrole = ["AXStandardWindow", "AXDialog", "AXSystemDialog"].contains(root.subrole)
-                    ? root.subrole : (root.subrole.isEmpty ? "none" : "other")
+                let subrole = root.subrole.isEmpty ? "none" : root.subrole
                 let identifier = root.identifier == "login" ? "login" : (root.identifier.isEmpty ? "none" : "other")
                 return "[\(index) role=\(role) subrole=\(subrole) id=\(identifier) modal=\(window.modal.map { String($0) } ?? "unknown") children=\(window.childCount.map { String($0) } ?? "unknown") actions=\(window.actionCount.map { String($0) } ?? "unknown")]"
             }.joined(separator: " ")
@@ -30,12 +29,13 @@ public enum LoginWindowPolicy {
         let candidates = windows.indices.filter { windows[$0].root.role == "AXWindow" && windows[$0].root.identifier == "login" }
         guard candidates.count == 1, let selected = candidates.first else { throw unsupported("expected one login window") }
         for (index, window) in windows.enumerated() {
-            guard ["", "AXStandardWindow"].contains(window.root.subrole), window.modal != true else {
+            guard !["AXDialog", "AXSystemDialog"].contains(window.root.subrole), window.modal != true else {
                 throw unsupported("dialog or unsupported window \(index)")
             }
             if index != selected {
                 // Only an explicitly empty, nonmodal, inert AX window may be ignored.
-                guard window.root.role == "AXWindow", window.root.identifier.isEmpty,
+                guard ["", "AXStandardWindow"].contains(window.root.subrole),
+                      window.root.role == "AXWindow", window.root.identifier.isEmpty,
                       window.modal == false, window.childCount == 0, window.actionCount == 0 else {
                     throw unsupported("unverified auxiliary window \(index)")
                 }
