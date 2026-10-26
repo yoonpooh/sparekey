@@ -13,9 +13,9 @@ Headless agent-browser and Playwright, DOM/CDP operations (even with a visible b
 
 ## 1. Check first
 
-Before the first GUI action of a task, run `sparekey status --json`. Record `initial_state` and set `lock_token = null`. Never infer relock authority from the current lock state.
+Before the first actual macOS desktop GUI action that requires an unlocked screen (clicking, typing, or inspecting the actual Mac screen), run `sparekey status --json`. Exclude browser plugin operations, headless browsers, and webpage screenshots that work while the Mac is locked. Record `initial_state` and set `lock_token = null`. Never infer relock authority from the current lock state.
 
-If a GUI tool fails, times out, or sees no windows, run `sparekey status --json` before retrying anything else. Do not keep retrying apps, Finder, or other windows on a locked Mac.
+If a tool fails, times out, or sees no windows during actual macOS desktop GUI actions that require an unlocked screen (clicking, typing, or inspecting the actual Mac screen), run `sparekey status --json` before retrying those desktop actions. Failures in browser plugin operations, headless browsers, or webpage screenshots that work while locked do not justify checking or unlocking the Mac. Do not keep retrying apps, Finder, or other desktop windows on a locked Mac.
 
 If `state` is `unlocked`, continue the task. This task did not unlock it.
 

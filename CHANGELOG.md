@@ -5,6 +5,11 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-10-26
+
+- Limit the agent skill's initial lock check and tool-failure check to actual macOS desktop actions that require an unlocked screen. Exclude browser plugin operations, headless browsers, and webpage screenshots that work while locked.
+- Regenerate the embedded skill so reinstalling the Codex and Claude Code skills applies the same scope. Helper lock/unlock behavior is unchanged.
+
 ## [0.3.10] - 2026-10-26
 
 - Select the login window alongside explicitly empty, nonmodal auxiliary windows with no AX actions. Continue rejecting dialogs and unverified auxiliary windows.
