@@ -5,6 +5,12 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-11-03
+
+- Run agent-issued Sparekey commands outside the execution sandbox as the logged-in user, without sudo. A blocked local helper socket can report `helper_not_running` even when the helper is healthy.
+- Check status outside the sandbox before recommending setup after a sandbox connection failure. Preserve the failed-unlock stop and existing lock authority rules.
+- Regenerate the embedded agent skill. Helper lock/unlock behavior is unchanged.
+
 ## [0.3.11] - 2026-10-26
 
 - Limit the agent skill's initial lock check and tool-failure check to actual macOS desktop actions that require an unlocked screen. Exclude browser plugin operations, headless browsers, and webpage screenshots that work while locked.

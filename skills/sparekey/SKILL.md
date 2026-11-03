@@ -7,6 +7,12 @@ description: Use only when a task requires computer use on the actual macOS desk
 
 Run `sparekey` from PATH. If it is missing, use `~/Library/Application Support/sparekey/bin/sparekey`.
 
+## Execution environment
+
+Run Sparekey commands outside the agent's execution sandbox, as the current logged-in user. The CLI connects to that user's local helper socket; a sandbox can block this connection and return `helper_not_running` even when the helper is healthy. In Codex, use `exec_command` with `sandbox_permissions: "require_escalated"` for Sparekey commands, following the tool's approval flow when required. This lifts the execution sandbox; it does not require `sudo` or running as root. If outside-sandbox execution is unavailable or denied, report that limitation and stop.
+
+If a command was already run inside the sandbox and reports `helper_not_running` or a helper connection failure, check `sparekey status --json` outside the sandbox before diagnosing a stopped helper or recommending setup. If that check succeeds, inspect the current state before deciding whether the original action is still needed. An uncertain result does not authorize repeating it, and a failed unlock must never be retried merely to change execution context. This execution guidance does not expand permission to unlock, force-lock, restart the helper, or run setup.
+
 ## Scope: actual desktop access only
 
 Headless agent-browser and Playwright, DOM/CDP operations (even with a visible browser), and browser-rendered webpage screenshots do not require Sparekey. Browser login failures, timeouts, and missing DOM elements do not justify checking or unlocking the Mac. Only apply this skill when switching to actual macOS desktop computer use. Use `status` for an explicit Sparekey status request without unlocking.
@@ -44,7 +50,7 @@ Do not relock when the Mac was already unlocked at the start, the user asked to 
 
 ## Errors
 
-Stop, report the `error.code`, and tell the user what to do, except for the single bounded probe repair described below. A failed probe is not a failed unlock: report which command failed and do not claim a password was submitted when only probe ran.
+After checking helper access outside the sandbox as described above, stop, report the `error.code`, and tell the user what to do, except for the single bounded probe repair described below. A failed probe is not a failed unlock: report which command failed and do not claim a password was submitted when only probe ran.
 
 - `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `accessibility_missing`, `credential_unavailable`: ask the user to run `sparekey doctor`, then `sparekey setup` in a local terminal. Never run setup yourself.
 - `breaker_tripped`, `unlock_not_confirmed`: the saved password may be wrong. Ask the user to run `sparekey setup --reset-password` locally.
