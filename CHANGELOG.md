@@ -5,6 +5,12 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.13] - 2026-11-04
+
+- Clarify when native desktop work needs Sparekey and keep browser restrictions separate from Mac lock state.
+- Remove redundant status checks and skip unlock when a probe already woke the session.
+- Keep the existing unlock safeguards and token-based cleanup. Helper behavior is unchanged.
+
 ## [0.3.12] - 2026-11-03
 
 - Run agent-issued Sparekey commands outside the execution sandbox as the logged-in user, without sudo. A blocked local helper socket can report `helper_not_running` even when the helper is healthy.
