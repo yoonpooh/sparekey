@@ -291,7 +291,6 @@ enum Screen {
         var activity: IOPMAssertionID = 0
         defer { if activity != 0 { IOPMAssertionRelease(activity) } }
         let started = ProcessInfo.processInfo.systemUptime
-        let firstDeadline = started + 1.5
         let ordinaryDeadline = started + 5
         // Leave room for one snapshot that starts just before the deadline and overruns it.
         let overallDeadline = started + 13.5
@@ -315,7 +314,11 @@ enum Screen {
             func poll(until deadline: TimeInterval) throws -> Snapshot? {
                 let effectiveDeadline = min(deadline, overallDeadline - snapshotAllowance)
                 return try PreparationRetry.run(deadline: effectiveDeadline, attemptIfExpired: false,
-                                                acceptLateResult: false, onTransient: { consecutive = false }, attempt: {
+                                                acceptLateResult: false, stopWhen: {
+                    DisplayRevealPolicy.shouldRecover(elapsed: ProcessInfo.processInfo.systemUptime - started,
+                                                      state: lastState, sawOwnLabel: sawOwnLabel,
+                                                      attempted: recoveryAttempted, sawVerifiedLayout: sawVerifiedLayout)
+                }, onTransient: { consecutive = false }, attempt: {
                     let current = try snapshot()
                     // A snapshot begun in time may finish late; never accept it or send Return after the phase deadline.
                     guard ProcessInfo.processInfo.systemUptime < effectiveDeadline else { return nil }
@@ -366,7 +369,7 @@ enum Screen {
                     return nil
                 }
             }
-            if let ready = try phase(until: firstDeadline) { return ready }
+            if let ready = try phase(until: ordinaryDeadline) { return ready }
             if DisplayRevealPolicy.shouldRecover(elapsed: ProcessInfo.processInfo.systemUptime - started,
                                                  state: lastState, sawOwnLabel: sawOwnLabel,
                                                  attempted: recoveryAttempted, sawVerifiedLayout: sawVerifiedLayout) {
@@ -375,8 +378,6 @@ enum Screen {
                 rebaselineNext = true
                 consecutive = false
                 if let ready = try phase(until: ProcessInfo.processInfo.systemUptime + 4.5) { return ready }
-            } else if let ready = try phase(until: ordinaryDeadline) {
-                return ready
             }
             if let lastTransient { throw lastTransient }
             switch lastState {

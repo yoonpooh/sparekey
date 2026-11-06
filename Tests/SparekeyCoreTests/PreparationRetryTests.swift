@@ -121,4 +121,85 @@ final class PreparationRetryTests: XCTestCase {
         XCTAssertNil(result)
         XCTAssertEqual(attempts, 1)
     }
+    func testSlowVerifiedAccountHiddenSnapshotStopsPollingForRecovery() throws {
+        let nodes = [LoginNode(role: "AXWindow", identifier: "login")]
+        var now = 0.0, attempts = 0, sawVerifiedLayout = false
+        var state = LoginPolicy.Preparation.waitingForAccount
+        func shouldRecover() -> Bool {
+            DisplayRevealPolicy.shouldRecover(elapsed: now, state: state, sawOwnLabel: false,
+                                              attempted: false, sawVerifiedLayout: sawVerifiedLayout)
+        }
+        let result: Int? = try PreparationRetry.run(deadline: 5, attemptIfExpired: false,
+                                                   acceptLateResult: false, stopWhen: shouldRecover,
+                                                   now: { now }, sleep: { _ in XCTFail("Recovery must start before another poll") },
+                                                   onTransient: { XCTFail("The layout is supported") }) {
+            attempts += 1
+            now += 2
+            let ownLabel = try LoginAccountPolicy.verify(in: nodes, allowedNames: ["local-user"]) { _ in
+                XCTFail("There is no account label to read")
+                return nil
+            }
+            state = try LoginPolicy.preparation(in: nodes, ownLabel: ownLabel)
+            sawVerifiedLayout = true
+            return nil
+        }
+        XCTAssertNil(result)
+        XCTAssertEqual(attempts, 1)
+        XCTAssertEqual(now, 2)
+        XCTAssertTrue(shouldRecover())
+    }
+
+    func testTransientUnsafeLayoutCannotRequestRecovery() {
+        let unsafe = [LoginNode(role: "AXWindow", identifier: "login"), LoginNode(role: "AXSheet", parent: 0)]
+        var now = 0.0
+        XCTAssertThrowsError(try PreparationRetry.run(deadline: 1, stopWhen: {
+            XCTFail("Transient layout failure must not request recovery")
+            return true
+        }, now: { now }, sleep: { now += $0 }, onTransient: {}) { () throws -> LoginPolicy.Preparation? in
+            try LoginPolicy.preparation(in: unsafe, ownLabel: false)
+        }) { error in
+            XCTAssertEqual((error as? SparekeyError)?.code, "login_window_unsupported")
+        }
+        XCTAssertEqual(now, 1, accuracy: 0.0001)
+    }
+
+    func testMismatchedAccountStopsWithoutRecovery() {
+        XCTAssertThrowsError(try PreparationRetry.run(deadline: 5, stopWhen: {
+            XCTFail("Mismatched accounts must not request recovery")
+            return true
+        }, now: { 0 }, sleep: { _ in XCTFail("Must not retry a mismatched account") },
+        onTransient: { XCTFail("Mismatch must remain terminal") }) { () throws -> Bool? in
+            try LoginAccountPolicy.verify(count: 1, role: "AXStaticText", label: "other-user", allowedNames: ["local-user"])
+            return true
+        }) { error in
+            XCTAssertEqual((error as? SparekeyError)?.code, "login_account_mismatch")
+        }
+    }
+
+    func testLateReadySnapshotIsNeitherAcceptedNorUsedForRecovery() throws {
+        var now = 0.0
+        let result: Int? = try PreparationRetry.run(deadline: 1, attemptIfExpired: false,
+                                                   acceptLateResult: false, stopWhen: {
+            XCTFail("A discarded ready snapshot must not request recovery")
+            return true
+        }, now: { now }, sleep: { _ in XCTFail("The deadline has elapsed") }, onTransient: {}) {
+            now = 1.1
+            return 42
+        }
+        XCTAssertNil(result)
+    }
+
+    func testLatePendingSnapshotDoesNotRequestRecovery() throws {
+        var now = 0.0
+        let result: Int? = try PreparationRetry.run(deadline: 1, attemptIfExpired: false,
+                                                   acceptLateResult: false, stopWhen: {
+            XCTFail("A discarded pending snapshot must not request recovery")
+            return true
+        }, now: { now }, sleep: { _ in XCTFail("The deadline has elapsed") }, onTransient: {}) {
+            now = 1.1
+            return nil
+        }
+        XCTAssertNil(result)
+    }
+
 }

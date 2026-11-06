@@ -17,6 +17,7 @@ public enum PreparationRetry {
     public static func run<T>(deadline: TimeInterval,
                               attemptIfExpired: Bool = true,
                               acceptLateResult: Bool = true,
+                              stopWhen: () -> Bool = { false },
                               now: () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
                               sleep: (TimeInterval) -> Void = { Thread.sleep(forTimeInterval: $0) },
                               onTransient: () -> Void, attempt: () throws -> T?) throws -> T? {
@@ -24,7 +25,11 @@ public enum PreparationRetry {
         var lastError: SparekeyError?
         repeat {
             do {
-                if let result = try attempt(), acceptLateResult || now() < deadline { return result }
+                if let result = try attempt() {
+                    if acceptLateResult || now() < deadline { return result }
+                } else if (acceptLateResult || now() < deadline) && stopWhen() {
+                    return nil
+                }
                 lastError = nil
             } catch let error as SparekeyError where error.transient {
                 lastError = error
