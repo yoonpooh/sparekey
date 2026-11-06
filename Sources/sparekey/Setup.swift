@@ -221,7 +221,7 @@ enum Setup {
     }
     static func run(_ invocation: Invocation) throws {
         try localTTY()
-        Console.line(Console.palette.bold("Sparekey 0.3.13 setup"))
+        Console.line(Console.palette.bold("Sparekey 0.3.14 setup"))
         Console.line()
         try steps(invocation)
     }

@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
         return result
     for args in [[], ['help'], ['--help'], ['-h'], ['help', 'setup'], ['lock', '--help']]:
         assert 'Usage:' in run(args).stdout
-    assert run(['version']).stdout == 'sparekey 0.3.13\n'
+    assert run(['version']).stdout == 'sparekey 0.3.14\n'
     assert run(['--version']).stdout == run(['version']).stdout
     bad = json.loads(run(['unlock', '--json', '--skill', 'codex'], 2).stdout)
     assert bad['error']['code'] == 'usage'
@@ -32,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix='sparekey-smoke-', dir='.build') as temp
         assert skill.exists() and 'sparekey unlock --json' in skill.read_text()
         content = skill.read_text()
         assert 'A later locked state alone is not evidence of user takeover.' in content
-        assert 'discard the previous lock token and repeat steps 1–4 once for this lock' in content
+        assert 'discard the previous lock token and repeat the steps above once for this lock' in content
         assert 'If the Mac relocks later in the task, stop and report it.' not in content
         assert 'Never retry a failed unlock' in content
         assert 'unless the user explicitly authorizes resuming desktop work' in content

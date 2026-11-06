@@ -5,6 +5,12 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-11-07
+
+- Reconsider the existing display recovery as soon as a verified account-hidden lock screen becomes available, even when its first Accessibility inspection takes longer than 1.5 seconds. Previously that late observation could miss recovery and end with `field_not_ready`.
+- Preserve exact account matching, secure-field validation, preparation deadlines, the single recovery limit, and token-based relocking.
+- Add slow-inspection and rejection regression checks, and align the installed-skill smoke check with the current skill wording.
+
 ## [0.3.13] - 2026-11-04
 
 - Clarify when native desktop work needs Sparekey and keep browser restrictions separate from Mac lock state.
