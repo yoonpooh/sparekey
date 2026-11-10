@@ -5,6 +5,14 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.15] - 2026-11-10
+
+- Distinguish missing helpers, response timeouts, disconnections, and other socket errors in transport and doctor diagnostics. Preserve those errors during setup startup checks and avoid recommending reinstallation or repeating unlock after a timeout/disconnect.
+- Suppress SIGPIPE on socket sends even when the peer closes before socket options can be configured.
+- Record preparation inspection counts and elapsed monotonic milliseconds without account, screen, credential, or token data. Keep preparation, recovery, and unlock attempt limits unchanged.
+- Add a read-only idle polling benchmark and preserve the one-second watcher cadence. One eligible 30-second sample used 14.607 ms of process CPU; other states were excluded, so the measurement does not justify changing lock detection or recovery timing.
+- Include regression tests, preparation diagnostics documentation, and reproducible raw polling measurements for PER-6, PER-7, and PER-8.
+
 ## [0.3.14] - 2026-11-07
 
 - Reconsider the existing display recovery as soon as a verified account-hidden lock screen becomes available, even when its first Accessibility inspection takes longer than 1.5 seconds. Previously that late observation could miss recovery and end with `field_not_ready`.
