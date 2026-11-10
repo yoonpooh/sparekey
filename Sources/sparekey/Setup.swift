@@ -52,11 +52,11 @@ enum Setup {
         }
         throw StepFailure("The LaunchAgent could not start after retries.", details: last)
     }
-    static func waitForCheck() throws -> Reply {
+    static func waitForCheck(request: () throws -> Reply = { try Transport.request("check") },
+                             sleep: (TimeInterval) -> Void = { Thread.sleep(forTimeInterval: $0) }) throws -> Reply {
         for _ in 0..<40 {
-            do { return try Transport.request("check") }
-            catch let issue as SparekeyError where issue.code == "helper_version_mismatch" { throw issue }
-            catch { Thread.sleep(forTimeInterval: 0.25) }
+            do { return try request() }
+            catch let issue as SparekeyError where issue.code == "helper_not_running" { sleep(0.25) }
         }
         throw SparekeyError("Helper did not start.", code: "helper_not_running")
     }

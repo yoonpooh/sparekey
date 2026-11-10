@@ -49,6 +49,7 @@ Do not relock when the Mac was already unlocked at the start, the user asked to 
 
 If a command fails, report its `error.code` and follow the guidance below. A probe failure can be inspected without retrying an unlock. A failed probe is not a failed unlock: report which command failed and do not claim a password was submitted when only probe ran.
 
+- `helper_timeout`, `helper_disconnected`, `helper_connection_failed`: check `sparekey status --json` and report the distinct error. A timed-out operation may still be running. Do not rerun unlock or recommend setup based only on these errors.
 - `not_set_up`, `helper_not_running`, `helper_version_mismatch`, `accessibility_missing`, `credential_unavailable`: ask the user to run `sparekey doctor`, then `sparekey setup` in a local terminal. Never run setup yourself.
 - `breaker_tripped`, `unlock_not_confirmed`: the saved password may be wrong. Ask the user to run `sparekey setup --reset-password` locally.
 - `rate_limited`: an attempt ran in the last 30 seconds. Check status instead of retrying.

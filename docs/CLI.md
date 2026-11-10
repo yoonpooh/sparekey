@@ -70,3 +70,16 @@ Check `ok` and `state` before acting. A successful `status` can report either `l
 
 Errors include installation and helper failures, account or login-field verification failures, rate limiting, and revoked relock authority. See [troubleshooting](../README.md#troubleshooting) for common codes and actions.
 `doctor` validates the installation, not the current loginwindow layout or an actual unlock.
+
+Helper transport failures retain distinct codes in command errors and doctor output:
+
+| Code | Meaning and next step |
+| --- | --- |
+| `helper_not_running` | Socket is missing or refuses connections. Run doctor locally to check the LaunchAgent. |
+| `helper_timeout` | The response deadline elapsed. The operation may still be running. Check status and do not repeat unlock. |
+| `helper_disconnected` | The connection ended before a complete response. Check status and do not repeat unlock. |
+| `helper_connection_failed` | Another socket access or I/O failure occurred. Check local socket permissions and diagnostics. |
+
+Timeout or disconnection alone does not justify setup/reinstallation. Setup's startup check retries only a missing/refused helper; other transport errors are preserved immediately. No automatic unlock retry is added.
+
+[Preparation diagnostics](preparation-diagnostics.md) describes inspection counts and timing without sensitive data. [Idle polling measurement](idle-polling.md) documents the read-only benchmark and its limits.

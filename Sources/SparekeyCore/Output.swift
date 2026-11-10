@@ -98,7 +98,7 @@ public struct DoctorCheck: Equatable {
 }
 
 public struct DoctorFacts {
-    public enum Helper: Equatable { case running(String), notRunning, versionMismatch }
+    public enum Helper: Equatable { case running(String), notRunning, versionMismatch, timedOut, disconnected, connectionFailed }
     public enum SkillFile: Equatable { case missing, current, modified, unsafe }
     public var installed = false, signed = false, agentLoaded = false
     public var helper = Helper.notRunning
@@ -133,8 +133,14 @@ public enum DoctorReport {
             running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "version \(version) differs", hint: ["Rerun 'sparekey setup' to refresh the helper."]))
         case .versionMismatch:
             running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "version differs", hint: ["Rerun 'sparekey setup' to refresh the helper."]))
+        case .timedOut:
+            running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "response timed out", hint: ["The operation may still be running. Check 'sparekey status --json'; do not repeat unlock."]))
+        case .disconnected:
+            running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "connection closed before response", hint: ["Check 'sparekey status --json'; do not repeat unlock."]))
+        case .connectionFailed:
+            running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "connection could not be verified", hint: ["Check local socket permissions and helper diagnostics."]))
         case .notRunning:
-            running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "not responding", hint: [facts.installed ? "Restart it: \(restart)" : setupHint]))
+            running = false; checks.append(DoctorCheck("helper_version", "Helper", .fail, "not running", hint: [facts.installed ? "Restart it: \(restart)" : setupHint]))
         }
         switch (running, facts.accessibility) {
         case (true, true?): checks.append(DoctorCheck("accessibility", "Accessibility", .ok, "enabled"))
@@ -175,7 +181,15 @@ public enum DoctorReport {
         func failed(_ name: String) -> Bool { checks.contains { $0.name == name && $0.status == .fail } }
         guard !healthy(checks) else { return nil }
         if failed("install_path") { return "not_set_up" }
-        if failed("helper_version") { return facts.helper == .versionMismatch ? "helper_version_mismatch" : "helper_not_running" }
+        if failed("helper_version") {
+            switch facts.helper {
+            case .running, .versionMismatch: return "helper_version_mismatch"
+            case .notRunning: return "helper_not_running"
+            case .timedOut: return "helper_timeout"
+            case .disconnected: return "helper_disconnected"
+            case .connectionFailed: return "helper_connection_failed"
+            }
+        }
         if failed("accessibility") { return "accessibility_missing" }
         if failed("credential") { return "credential_unavailable" }
         if failed("breaker") { return "breaker_tripped" }

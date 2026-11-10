@@ -34,11 +34,30 @@ enum Transport {
         try (JSONEncoder().encode(value) + Data([10])).withUnsafeBytes { bytes in
             var offset = 0
             while offset < bytes.count {
-                let count = Darwin.write(fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset)
+                let count = Darwin.send(fd, bytes.baseAddress!.advanced(by: offset), bytes.count - offset, MSG_NOSIGNAL)
                 if count < 0 && errno == EINTR { continue }
-                guard count > 0 else { throw SparekeyError("Cannot write helper message.") }
+                guard count > 0 else {
+                    if errno == EAGAIN || errno == EWOULDBLOCK { throw timedOut() }
+                    if errno == EPIPE || errno == ECONNRESET { throw disconnected() }
+                    throw SparekeyError("Cannot write helper message.", code: "helper_connection_failed")
+                }
                 offset += count
             }
+        }
+    }
+    static func timedOut() -> SparekeyError {
+        SparekeyError("Helper response timed out. The operation may still be running. Check 'sparekey status --json'; do not repeat unlock.", code: "helper_timeout")
+    }
+    static func disconnected() -> SparekeyError {
+        SparekeyError("Helper connection closed before a complete response. Check 'sparekey status --json'; do not repeat unlock.", code: "helper_disconnected")
+    }
+    static func connectPeer(_ fd: Int32, address: UnsafePointer<sockaddr>, length: socklen_t) throws {
+        guard connect(fd, address, length) == 0 else {
+            if errno == ENOENT || errno == ECONNREFUSED {
+                throw SparekeyError("Helper is not running. Run 'sparekey doctor' in a local terminal.", code: "helper_not_running")
+            }
+            if errno == ETIMEDOUT { throw timedOut() }
+            throw SparekeyError("Cannot connect to the helper. Check local socket access with 'sparekey doctor'.", code: "helper_connection_failed")
         }
     }
     static func receive(_ fd: Int32, limit: Int = 4096, timeout: TimeInterval = 20) throws -> Data {
@@ -51,15 +70,17 @@ enum Transport {
             var ready = pollfd(fd: fd, events: Int16(POLLIN), revents: 0)
             let polled = poll(&ready, 1, Int32((remaining * 1000).rounded(.up)))
             if polled < 0 && errno == EINTR { continue }
+            if polled < 0 { throw SparekeyError("Cannot wait for helper response.", code: "helper_connection_failed") }
             guard polled > 0, ProcessInfo.processInfo.systemUptime < deadline else { break }
             let count = recv(fd, &buffer, buffer.count, MSG_DONTWAIT)
             if count < 0 && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) { continue }
-            guard count > 0 else { break }
+            if count == 0 || (count < 0 && errno == ECONNRESET) { throw disconnected() }
+            guard count > 0 else { throw SparekeyError("Cannot read helper response.", code: "helper_connection_failed") }
             for byte in buffer[..<count] {
                 if let result = try frame.append(byte) { return result }
             }
         }
-        throw SparekeyError("Helper disconnected or timed out.", code: "helper_not_running")
+        throw timedOut()
     }
     static func request(_ command: String, noCover: Bool = false, lockToken: String? = nil, forceLock: Bool = false) throws -> Reply {
         try Paths.checkedDirectory(Paths.base, create: false)
@@ -68,7 +89,7 @@ enum Transport {
         guard fd >= 0 else { throw SparekeyError("Cannot create socket.") }
         defer { close(fd) }
         configure(fd, seconds: 20)
-        guard try address({ connect(fd, $0, $1) }) == 0 else { throw SparekeyError("Helper is not running. Run 'sparekey setup'.", code: "helper_not_running") }
+        try address { try connectPeer(fd, address: $0, length: $1) }
         try verifyPeer(fd)
         try send(Request(command, noCover: noCover, lockToken: lockToken, forceLock: forceLock), to: fd)
         let reply = try JSONDecoder().decode(Reply.self, from: receive(fd))

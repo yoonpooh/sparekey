@@ -20,6 +20,34 @@ final class TransportTests: XCTestCase {
         }
     }
 
+    func testMissingHelperSocket() throws {
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        defer { close(fd) }
+        var address = sockaddr_un()
+        address.sun_family = sa_family_t(AF_UNIX)
+        address.sun_len = UInt8(MemoryLayout<sockaddr_un>.size)
+        let path = Array(("/tmp/sparekey-missing-" + UUID().uuidString).utf8) + [0]
+        withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: path) }
+        try withUnsafePointer(to: &address) {
+            try $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                XCTAssertThrowsError(try Transport.connectPeer(fd, address: $0, length: socklen_t(MemoryLayout<sockaddr_un>.size))) {
+                    XCTAssertEqual(($0 as? SparekeyError)?.code, "helper_not_running")
+                }
+            }
+        }
+    }
+
+    func testClosedPeerWriteIsNotMisreportedAsMissingHelper() throws {
+        var sockets: [Int32] = [-1, -1]
+        XCTAssertEqual(socketpair(AF_UNIX, SOCK_STREAM, 0, &sockets), 0)
+        guard sockets[0] >= 0 else { return }
+        close(sockets[0])
+        defer { close(sockets[1]) }
+        XCTAssertThrowsError(try Transport.send(Request("status"), to: sockets[1])) {
+            XCTAssertEqual(($0 as? SparekeyError)?.code, "helper_disconnected")
+        }
+    }
+
     func testCompleteFrameAndTrailingData() throws {
         try withSocket { reader, writer in
             write(Data("hello\nignored".utf8), to: writer)
@@ -80,7 +108,7 @@ final class TransportTests: XCTestCase {
             write(Data("partial".utf8), to: writer)
             shutdown(writer, SHUT_WR)
             XCTAssertThrowsError(try Transport.receive(reader)) { error in
-                XCTAssertEqual((error as? SparekeyError)?.code, "helper_not_running")
+                XCTAssertEqual((error as? SparekeyError)?.code, "helper_disconnected")
             }
         }
     }
@@ -115,7 +143,7 @@ final class TransportTests: XCTestCase {
             }
             let start = ProcessInfo.processInfo.systemUptime
             XCTAssertThrowsError(try Transport.receive(reader)) { error in
-                XCTAssertEqual((error as? SparekeyError)?.code, "helper_not_running")
+                XCTAssertEqual((error as? SparekeyError)?.code, "helper_timeout")
             }
             let elapsed = ProcessInfo.processInfo.systemUptime - start
             XCTAssertLessThan(elapsed, 21, "Partial input extended the 20-second frame deadline.")
@@ -132,7 +160,7 @@ final class TransportTests: XCTestCase {
             }
             let start = ProcessInfo.processInfo.systemUptime
             XCTAssertThrowsError(try Transport.receive(reader, limit: 256, timeout: 2)) { error in
-                XCTAssertEqual((error as? SparekeyError)?.code, "helper_not_running")
+                XCTAssertEqual((error as? SparekeyError)?.code, "helper_timeout")
             }
             XCTAssertLessThan(ProcessInfo.processInfo.systemUptime - start, 2.5)
             wait(for: [disconnected], timeout: 2)

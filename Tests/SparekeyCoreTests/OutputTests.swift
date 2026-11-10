@@ -2,6 +2,28 @@ import XCTest
 @testable import SparekeyCore
 
 final class OutputTests: XCTestCase {
+    func testHelperFailuresKeepDistinctCodesAndRecoveryHints() {
+        for (helper, code) in [(DoctorFacts.Helper.notRunning, "helper_not_running"),
+                               (.timedOut, "helper_timeout"), (.disconnected, "helper_disconnected"),
+                               (.connectionFailed, "helper_connection_failed"), (.versionMismatch, "helper_version_mismatch"),
+                               (.running("old"), "helper_version_mismatch")] {
+            var facts = DoctorFacts()
+            facts.installed = true
+            facts.signed = true
+            facts.agentLoaded = true
+            facts.helper = helper
+            let checks = DoctorReport.evaluate(facts)
+            XCTAssertEqual(DoctorReport.errorCode(checks, facts: facts), code)
+            if helper == .timedOut || helper == .disconnected || helper == .connectionFailed {
+                let hints = checks.flatMap(\.hint).joined(separator: " ")
+                XCTAssertFalse(hints.contains("setup"))
+                XCTAssertFalse(hints.contains("kickstart"))
+                XCTAssertEqual(checks.first { $0.name == "accessibility" }?.status, .skip)
+                XCTAssertEqual(checks.first { $0.name == "credential" }?.status, .skip)
+            }
+        }
+    }
+
     private func ready() -> DoctorFacts {
         var facts = DoctorFacts()
         facts.installed = true; facts.signed = true; facts.agentLoaded = true

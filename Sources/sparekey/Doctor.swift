@@ -27,8 +27,15 @@ enum Doctor {
             facts.credentialReadable = reply.credentialReadable
         } catch let issue as SparekeyError where issue.code == "helper_version_mismatch" {
             facts.helper = .versionMismatch
+        } catch let issue as SparekeyError {
+            switch issue.code {
+            case "helper_not_running", "not_set_up": facts.helper = .notRunning
+            case "helper_timeout": facts.helper = .timedOut
+            case "helper_disconnected": facts.helper = .disconnected
+            default: facts.helper = .connectionFailed
+            }
         } catch {
-            facts.helper = .notRunning
+            facts.helper = .connectionFailed
         }
         facts.breakerTripped = state?.breakerTripped
         facts.codexSkill = skillFile("codex")

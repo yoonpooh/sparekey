@@ -5,6 +5,7 @@ import Security
 import SystemConfiguration
 import SparekeyCore
 import Darwin
+import OSLog
 
 enum Screen {
     static func displayAsleep() -> Bool { CGDisplayIsAsleep(CGMainDisplayID()) != 0 }
@@ -291,6 +292,11 @@ enum Screen {
         var activity: IOPMAssertionID = 0
         defer { if activity != 0 { IOPMAssertionRelease(activity) } }
         let started = ProcessInfo.processInfo.systemUptime
+        var diagnostics = PreparationDiagnostics(started: started)
+        defer {
+            let report = diagnostics.report(now: ProcessInfo.processInfo.systemUptime)
+            Logger(subsystem: "io.github.yoonpooh.sparekey", category: "preparation").info("\(report, privacy: .public)")
+        }
         let ordinaryDeadline = started + 5
         // Leave room for one snapshot that starts just before the deadline and overruns it.
         let overallDeadline = started + 13.5
@@ -319,7 +325,7 @@ enum Screen {
                                                       state: lastState, sawOwnLabel: sawOwnLabel,
                                                       attempted: recoveryAttempted, sawVerifiedLayout: sawVerifiedLayout)
                 }, onTransient: { consecutive = false }, attempt: {
-                    let current = try snapshot()
+                    let current = try diagnostics.inspect { try snapshot() }
                     // A snapshot begun in time may finish late; never accept it or send Return after the phase deadline.
                     guard ProcessInfo.processInfo.systemUptime < effectiveDeadline else { return nil }
                     let state = try LoginPolicy.preparation(in: current.nodes, ownLabel: current.ownLabel)
@@ -389,9 +395,9 @@ enum Screen {
                 throw SparekeyError("The password field did not appear after preparing the verified account screen. No password was submitted.", code: "field_not_ready")
             }
         } catch let issue as SparekeyError {
-            throw SparekeyError("\(issue.description) \(recoveryReport())", code: issue.code)
+            throw SparekeyError("\(issue.description) \(recoveryReport()) \(diagnostics.report(now: ProcessInfo.processInfo.systemUptime))", code: issue.code)
         } catch {
-            throw SparekeyError("Display preparation failed. \(recoveryReport())")
+            throw SparekeyError("Display preparation failed. \(recoveryReport()) \(diagnostics.report(now: ProcessInfo.processInfo.systemUptime))")
         }
     }
 
