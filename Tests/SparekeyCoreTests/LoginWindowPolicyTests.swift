@@ -36,6 +36,21 @@ final class LoginWindowPolicyTests: XCTestCase {
         XCTAssertEqual(try LoginWindowPolicy.select(in: [noSubrole, login]), 1)
     }
 
+    func testSelectsPopulatedLoginAlongsideReportedEmptyLoginWindow() throws {
+        let root = LoginNode(role: "AXWindow", subrole: "AXUnknown", identifier: "login")
+        let populated = LoginWindow(root: root, modal: false, childCount: 9, actionCount: 1)
+        let companion = LoginWindow(root: root, modal: false, childCount: 0, actionCount: 1)
+        XCTAssertEqual(try LoginWindowPolicy.select(in: [populated, companion]), 0)
+        XCTAssertEqual(try LoginWindowPolicy.select(in: [companion, populated]), 1)
+
+        assertUnsupported([companion, companion])
+        assertUnsupported([populated, companion, companion])
+        assertUnsupported([populated, LoginWindow(root: root, modal: true, childCount: 0, actionCount: 1)])
+        assertUnsupported([populated, LoginWindow(root: root, modal: nil, childCount: 0, actionCount: 1)])
+        assertUnsupported([populated, LoginWindow(root: root, modal: false, childCount: nil, actionCount: 1)])
+        assertUnsupported([populated, LoginWindow(root: root, modal: false, childCount: 0, actionCount: 2)])
+    }
+
     private func assertUnsupported(_ windows: [LoginWindow], file: StaticString = #filePath, line: UInt = #line) {
         XCTAssertThrowsError(try LoginWindowPolicy.select(in: windows), file: file, line: line) { error in
             XCTAssertEqual((error as? SparekeyError)?.code, "login_window_unsupported", file: file, line: line)

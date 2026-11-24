@@ -5,6 +5,10 @@ All notable changes are documented here. This project follows
 
 ## [Unreleased]
 
+## [0.3.16] - 2026-11-24
+
+- Fix `probe` and `unlock` preparation when macOS exposes a populated login window alongside the empty login window reported in [#9](https://github.com/yoonpooh/sparekey/issues/9). The populated window still requires account and password-field verification.
+
 ## [0.3.15] - 2026-11-10
 
 - Distinguish missing helpers, response timeouts, disconnections, and other socket errors in transport and doctor diagnostics. Preserve those errors during setup startup checks and avoid recommending reinstallation or repeating unlock after a timeout/disconnect.

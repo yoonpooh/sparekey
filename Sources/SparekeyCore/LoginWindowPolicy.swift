@@ -27,6 +27,12 @@ public enum LoginWindowPolicy {
         }
         guard !windows.isEmpty, windows.count <= 8 else { throw unsupported("inspection requires 1...8 windows") }
         let candidates = windows.indices.filter { windows[$0].root.role == "AXWindow" && windows[$0].root.identifier == "login" }
+        if windows.count == 2, candidates.count == 2,
+           windows.allSatisfy({ $0.root.subrole == "AXUnknown" && $0.modal == false }),
+           windows.contains(where: { $0.childCount == 0 && $0.actionCount == 1 }),
+           let populated = windows.firstIndex(where: { ($0.childCount ?? 0) > 0 }) {
+            return populated
+        }
         guard candidates.count == 1, let selected = candidates.first else { throw unsupported("expected one login window") }
         for (index, window) in windows.enumerated() {
             guard !["AXDialog", "AXSystemDialog"].contains(window.root.subrole), window.modal != true else {

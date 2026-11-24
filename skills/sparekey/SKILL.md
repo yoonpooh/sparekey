@@ -61,7 +61,7 @@ If a command fails, report its `error.code` and follow the guidance below. A pro
 
 ### Inspect a multiple-window probe failure
 
-The helper selects one login window and ignores only explicitly empty, nonmodal auxiliary windows with no AX actions. Other windows remain a layout failure. The error includes bounded window role, subrole, login-identifier classification, modal flag, child count, and action count. `unknown` means an attribute was unavailable. These diagnostics do not read window titles, account labels, process lists, or password values. The helper never closes windows. Its display recovery does not dismiss dialogs.
+The helper selects one login window and can ignore explicitly empty, nonmodal auxiliary windows with no AX actions. It also accepts a pair of nonmodal `AXUnknown` login windows when one has children and the other has zero children and exactly one AX action. The populated window still requires account and password-field verification. Other windows remain a layout failure. The error includes bounded window role, subrole, login-identifier classification, modal flag, child count, and action count. `unknown` means an attribute was unavailable. These diagnostics do not read window titles, account labels, process lists, or password values. The helper never closes windows. Its display recovery does not dismiss dialogs.
 
 With native CUA on macOS, inspect the loginwindow app directly, even while locked:
 
